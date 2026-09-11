@@ -60,4 +60,11 @@ try {
             ConvertTo-Json | Set-Content (Join-Path $EvidenceDirectory 'watchdog.json')
     }
     $child.Dispose()
+    if (-not $SelfTest) {
+        # Muse's Windows logger uses OutputDebugString and app-local files,
+        # including Qt messages. Capture only logs under verified fresh roots,
+        # after the owned helper/process tree is stopped, even when it failed.
+        & python (Join-Path $PSScriptRoot 'collect_application_logs.py') --report (Join-Path $EvidenceDirectory 'gui-observations.json')
+        if ($LASTEXITCODE -ne 0) { Write-Warning 'Application log capture was incomplete; inspect application-logs.json.' }
+    }
 }

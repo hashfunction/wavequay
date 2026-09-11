@@ -74,7 +74,7 @@ order, source revision, module hashes/paths, environment, UI controls, image
 hashes/dimensions, observation duration, and owned-process cleanup.
 
 Artifacts preserve `gui-observations.json`, latest raw UI tree, page/main/failure
-screenshots, target stdout/stderr (including Qt plugin diagnostics), helper
+screenshots, target stdout/stderr, helper
 stdout/stderr, watchdog results and helper self-test evidence. The workflow
 explicitly excludes stage binaries, helper binaries and private environment
 contents. Failure leaves `windows_main_window_verified=false` while preserving
@@ -82,6 +82,28 @@ completed build/stage/test flags. Audio devices, native export, source/license
 closure and submission remain false regardless of GUI outcome. Screenshots also
 need human review; this check does not cover menu completeness, recipe editing,
 audio, devices, high contrast, scaling, packaging, or Store qualification.
+
+Muse's Windows logger sends console messages to `OutputDebugString` and its own
+application log, and installs a Qt message handler. `QT_FORCE_STDERR_LOGGING`
+does not override that handler. Empty stdout/stderr therefore does not mean
+there were no startup errors. After the owned helper/process tree stops, the
+outer launcher runs `collect_application_logs.py` on the prelaunch profile
+record. It copies only timestamped WaveQuay/Audacity startup `.log` files under
+recognized app roots that the observer proved absent before launch. It does not
+copy preferences, projects or arbitrary private-environment contents. Reparse
+paths and previously existing profiles are rejected. At most eight log tails
+of 2 MiB each are retained as `application-startup-*.log`; metadata records
+original paths, sizes, offsets, truncation and captured SHA-256 hashes in
+`application-logs.json`. Existing artifact globs already include those files.
+Capture errors remain separate diagnostics and never manufacture GUI success.
+
+Windows run `34597342931` at snapshot
+`5fbfc2efa2dc5d1cb307f220ebfa8a651588bfa3` reached only the loading splash,
+not onboarding. Its stdout/stderr were empty and its application logs were not
+uploaded. The same splash-only result exists in run `34596275560`. This bounded
+collector repairs that evidence gap; the exact underlying startup failure and
+actual editor qualification still require another native run. The exact title,
+onboarding, module-provenance and process-lifetime requirements remain intact.
 
 ## Local development checks
 
