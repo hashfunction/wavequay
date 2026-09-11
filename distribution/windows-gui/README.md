@@ -290,3 +290,33 @@ Local locked-reference compilation succeeds with zero warnings and all 38
 distribution tests pass. A fresh Windows run must execute that self-test and
 still capture three real onboarding pages plus two stable editor observations
 before GUI qualification can pass.
+
+## Floating startup dialog parameters (run 34640449587)
+
+Run `34640449587` built and launched public source
+`ccf9a6fdf8d7d289e5579924db62bedf398d90e5`. The retained UI tree records the
+exact `WaveQuay 4.0` main window and a visible `Getting started` `QQuickView`,
+but no onboarding controls or pages. The process loaded 149 modules and stayed
+alive until the 90-second observer timeout; owned cleanup succeeded. Its native
+stderr (SHA256
+`97f15da19f2e17aee6546639be3c145b333e56077ed7a37dac7bed655f4abf6c`)
+identifies the source-backed object-construction failure:
+
+```text
+FirstLaunchSetupDialog.qml: Setting initial properties failed:
+FirstLaunchSetupDialog does not have a property called floating
+```
+
+`StartupScenario` passes `floating=true` to both the first-launch and welcome
+QML dialogs. The interactive framework retains that query value to track the
+opened window and also supplies it as an initial QML property. Both dialog roots
+now accept the routing property without changing their modal, frameless,
+content, or navigation behavior. A source-binding regression covers both real
+startup queries and both QML targets, including rejection of an immutable
+property that initial object construction could not set.
+
+RED: the regression found neither dialog accepted its real `floating` input.
+GREEN: all 39 distribution tests pass locally, including the existing native
+QML module and logger fixtures. A fresh Windows build must still observe all
+three real onboarding pages, the stable editor, process survival, and owned
+cleanup. This local repair is not a Windows GUI qualification result.

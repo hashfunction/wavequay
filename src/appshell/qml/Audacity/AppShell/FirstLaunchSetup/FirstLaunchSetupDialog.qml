@@ -41,6 +41,9 @@ StyledDialogView {
 
     margins: 0
 
+    // Accepted from Interactive as a window-tracking route parameter.
+    property bool floating: false
+
     readonly property Page currentPage: pageLoader.item as Page
 
     function endSetup() {

@@ -31,6 +31,9 @@ import Audacity.AppShell
 StyledDialogView {
     id: root
 
+    // Accepted from Interactive as a window-tracking route parameter.
+    property bool floating: false
+
     title: qsTrc("appshell/welcome", "Welcome")
 
     contentHeight: contentColumn.height + footerArea.height
