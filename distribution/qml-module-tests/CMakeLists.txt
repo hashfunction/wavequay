@@ -7,7 +7,7 @@ find_package(Qt6 6.10 REQUIRED COMPONENTS Core Qml Quick Widgets)
 get_filename_component(WAVEQUAY_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 include("${WAVEQUAY_ROOT}/distribution/ConfigureWaveQuay.cmake")
 
-# Execute the real appshell QML source selection without linking its audio engine.
+# Instantiate the real appshell QML source selection without linking its audio engine.
 # Native UI controls are replaced only at the unrelated styling boundary below.
 function(muse_create_qml_module target)
     add_library(${target} STATIC "${PROJECT_SOURCE_DIR}/empty.cpp")

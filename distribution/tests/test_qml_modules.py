@@ -1,4 +1,4 @@
-"""Compile real appshell-selected QML; no GUI, audio engine or online modules."""
+"""Instantiate real appshell-selected QML offscreen, without the audio engine."""
 from pathlib import Path
 import subprocess
 import tempfile
@@ -25,7 +25,9 @@ class QmlModuleTests(unittest.TestCase):
     def test_offline_view_loads_without_unavailable_extension_registration(self):
         with tempfile.TemporaryDirectory() as directory:
             executable = self.probe(directory, '-DAU_TRIEFLOW_DISTRIBUTION=ON')
-            self.checked([str(executable)])
+            result = self.checked([str(executable)])
+            self.assertIn('Production ExtensionsListView QML instantiated', result.stderr)
+            self.assertNotIn('ReferenceError', result.stderr)
 
     def test_upstream_view_retains_its_extension_model_requirement(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -34,7 +36,9 @@ class QmlModuleTests(unittest.TestCase):
             result = subprocess.run([str(executable)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn('DevExtensionsListModel is not a type', result.stderr)
-            self.checked([str(executable), '--enabled-model'])
+            enabled = self.checked([str(executable), '--enabled-model'])
+            self.assertIn('Production ExtensionsListView QML instantiated', enabled.stderr)
+            self.assertNotIn('ReferenceError', enabled.stderr)
 
 
 if __name__ == '__main__':

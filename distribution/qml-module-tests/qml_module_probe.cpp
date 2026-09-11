@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Compile the selected real QML using QCoreApplication; no native windows open.
-#include <QCoreApplication>
+// Instantiate the selected real QML offscreen; no native windows open.
 #include <QDebug>
+#include <QGuiApplication>
 #include <QQmlComponent>
+#include <QQmlContext>
 #include <QQmlEngine>
 #include <QVariant>
+#include <cstdio>
+#include <memory>
 
 // Test-only registration boundary for the enabled upstream module. No model is
 // registered in the offline case, matching the actual Muse extensions stub.
@@ -19,11 +22,21 @@ public:
 
 int main(int argc, char** argv)
 {
-    QCoreApplication app(argc, argv);
+    qputenv("QT_QPA_PLATFORM", "offscreen");
+    QGuiApplication app(argc, argv);
     if (app.arguments().contains(QStringLiteral("--enabled-model"))) {
         qmlRegisterType<EnabledExtensionsModel>("Muse.Extensions", 1, 0, "DevExtensionsListModel");
     }
     QQmlEngine engine;
+    const QVariantMap theme {
+        { QStringLiteral("backgroundSecondaryColor"), QStringLiteral("#ffffff") },
+    };
+    const QVariantMap ui {
+        { QStringLiteral("theme"), theme },
+    };
+    engine.rootContext()->setContextProperty(QStringLiteral("ui"), ui);
+    engine.globalObject().setProperty(QStringLiteral("qsTrc"),
+        engine.evaluate(QStringLiteral("(function(context, text) { return text; })")));
     QQmlComponent view(&engine,
         QUrl(QStringLiteral("qrc:/qt/qml/Audacity/AppShell/DevTools/Extensions/ExtensionsListView.qml")));
     if (!view.isReady()) {
@@ -40,7 +53,14 @@ int main(int argc, char** argv)
         }
         return 1;
     }
-    qInfo() << "Production ExtensionsListView QML compiled";
+    std::unique_ptr<QObject> instance(namedView.create());
+    if (!instance) {
+        for (const auto& error : namedView.errors()) {
+            qCritical().noquote() << error.toString();
+        }
+        return 1;
+    }
+    std::fputs("Production ExtensionsListView QML instantiated\n", stderr);
     return 0;
 }
 
