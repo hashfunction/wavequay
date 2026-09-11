@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="configs/learn.cfg">configs/learn.cfg</file>
+        <file alias="configs/light.cfg">../src/app/configs/light.cfg</file>
+        <file alias="configs/dark.cfg">../src/app/configs/dark.cfg</file>
+        <file alias="configs/high_contrast_black.cfg">../src/app/configs/high_contrast_black.cfg</file>
+        <file alias="configs/high_contrast_white.cfg">../src/app/configs/high_contrast_white.cfg</file>
+        <file alias="configs/shortcuts.cfg">../src/app/configs/shortcuts.cfg</file>
+        <file alias="configs/data/shortcuts.xml">../src/app/configs/data/shortcuts.xml</file>
+        <file alias="configs/workspaces.cfg">../src/app/configs/workspaces.cfg</file>
+        <file alias="configs/languages.cfg">../src/app/configs/languages.cfg</file>
+        <file alias="configs/ui.cfg">../src/app/configs/ui.cfg</file>
+        <file alias="configs/update.cfg">configs/update.cfg</file>
+        <file alias="configs/user_agent.cfg">../src/app/configs/user_agent.cfg</file>
+        <file alias="resources/appIcon.png">branding/wavequay.png</file>
+        <file alias="resources/wavequay.svg">branding/wavequay.svg</file>
+    </qresource>
+</RCC>

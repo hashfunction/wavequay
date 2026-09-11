@@ -1,0 +1,17 @@
+# Normalize line endings of all files that Git considers to be text
+* text eol=lf
+#except images and sounds
+*.png -text
+*.gif -text
+*.jpg -text
+*.icns -text
+*.wav -text
+*.au -text
+*.ico -text
+# and weird stuff in lib-src
+*.ttl text=auto
+*.aps text=auto
+*.trig text=auto
+
+# Preserve exact upstream dependency patch bytes and patch context whitespace.
+distribution/recipes/portaudio/patch/*.patch -text whitespace=-blank-at-eol

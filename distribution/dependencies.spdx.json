@@ -1,0 +1,73 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "WaveQuay source qualification inventory",
+  "documentNamespace": "https://wavequay.trieflow.com/source/spdx/qualification-2026-09-11",
+  "creationInfo": {
+    "created": "2026-09-11T09:14:14Z",
+    "creators": [
+      "Organization: Trieflow"
+    ]
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Audacity",
+      "name": "Audacity",
+      "versionInfo": "4c177d436e48c1d20f231eada44035593cb26292",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "Exact Git commit retained in WaveQuay source checkout. See .gitmodules for authoritative submodule URLs; this source inventory is not a binary SBOM."
+    },
+    {
+      "SPDXID": "SPDXRef-Muse",
+      "name": "Muse",
+      "versionInfo": "3c5512eb8ee1a863a6123e62bd75a6ab55045752",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "Exact Git commit retained in WaveQuay source checkout. See .gitmodules for authoritative submodule URLs; this source inventory is not a binary SBOM."
+    },
+    {
+      "SPDXID": "SPDXRef-MuseDependencies",
+      "name": "MuseDependencies",
+      "versionInfo": "b915e6703a2a9839b2a98d4ca2468a88e361929f",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "sourceInfo": "Exact Git commit retained in WaveQuay source checkout. See .gitmodules for authoritative submodule URLs; this source inventory is not a binary SBOM."
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-Audacity",
+      "relationshipType": "DESCRIBES"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-Muse",
+      "relationshipType": "DESCRIBES"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relatedSpdxElement": "SPDXRef-MuseDependencies",
+      "relationshipType": "DESCRIBES"
+    }
+  ],
+  "annotations": [
+    {
+      "annotationDate": "2026-09-11T09:14:14Z",
+      "annotationType": "OTHER",
+      "annotator": "Organization: Trieflow",
+      "comment": "Source inventory only. license_audit_complete=false. Native binary inventory, exact artifact hashes and corresponding-source closure remain release gates. No Windows package is approved by this document."
+    }
+  ]
+}
