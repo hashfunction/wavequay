@@ -44,9 +44,12 @@ if(NOT view OR NOT alias STREQUAL "DevTools/Extensions/ExtensionsListView.qml")
     message(FATAL_ERROR "The selected developer view must keep its production QML resource alias")
 endif()
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/selected-view.txt" "${view}\n")
+file(SHA256 "${view}" selected_view_sha256)
 
 add_executable(qml_module_probe qml_module_probe.cpp)
 target_link_libraries(qml_module_probe PRIVATE Qt6::Core Qt6::Qml Qt6::Quick)
+target_compile_definitions(qml_module_probe PRIVATE
+    WAVEQUAY_SELECTED_VIEW_SHA256="${selected_view_sha256}")
 set_source_files_properties("${view}" PROPERTIES QT_RESOURCE_ALIAS "${alias}")
 # The versioned Qt API is not intercepted: exercise its real resource alias and
 # qmldir/type generation too, not a hand-written appshell module declaration.

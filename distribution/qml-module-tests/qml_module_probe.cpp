@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Instantiate the selected real QML offscreen; no native windows open.
 #include <QDebug>
+#include <QCryptographicHash>
+#include <QFile>
 #include <QGuiApplication>
 #include <QQmlComponent>
 #include <QQmlContext>
@@ -22,8 +24,23 @@ public:
 
 int main(int argc, char** argv)
 {
+    // The two counterfactual probes intentionally use the same executable and
+    // qrc URL. Never allow one process's compiled-QML cache to satisfy the
+    // other process from different embedded source bytes.
+    qputenv("QML_DISABLE_DISK_CACHE", "1");
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app(argc, argv);
+    QFile selected(QStringLiteral(":/qt/qml/Audacity/AppShell/DevTools/Extensions/ExtensionsListView.qml"));
+    if (!selected.open(QIODevice::ReadOnly)) {
+        std::fputs("Selected QML resource cannot be opened\n", stderr);
+        return 1;
+    }
+    const auto selectedHash = QCryptographicHash::hash(selected.readAll(), QCryptographicHash::Sha256).toHex();
+    if (selectedHash != QByteArrayLiteral(WAVEQUAY_SELECTED_VIEW_SHA256)) {
+        std::fprintf(stderr, "Selected QML resource hash mismatch: %s\n", selectedHash.constData());
+        return 1;
+    }
+    std::fprintf(stderr, "Selected QML SHA256 %s\n", selectedHash.constData());
     if (app.arguments().contains(QStringLiteral("--enabled-model"))) {
         qmlRegisterType<EnabledExtensionsModel>("Muse.Extensions", 1, 0, "DevExtensionsListModel");
     }
@@ -41,7 +58,7 @@ int main(int argc, char** argv)
         QUrl(QStringLiteral("qrc:/qt/qml/Audacity/AppShell/DevTools/Extensions/ExtensionsListView.qml")));
     if (!view.isReady()) {
         for (const auto& error : view.errors()) {
-            qCritical().noquote() << error.toString();
+            std::fprintf(stderr, "%s\n", qPrintable(error.toString()));
         }
         return 1;
     }
@@ -49,14 +66,14 @@ int main(int argc, char** argv)
     namedView.setData("import Audacity.AppShell 1.0\nExtensionsListView {}", QUrl());
     if (!namedView.isReady()) {
         for (const auto& error : namedView.errors()) {
-            qCritical().noquote() << error.toString();
+            std::fprintf(stderr, "%s\n", qPrintable(error.toString()));
         }
         return 1;
     }
     std::unique_ptr<QObject> instance(namedView.create());
     if (!instance) {
         for (const auto& error : namedView.errors()) {
-            qCritical().noquote() << error.toString();
+            std::fprintf(stderr, "%s\n", qPrintable(error.toString()));
         }
         return 1;
     }
