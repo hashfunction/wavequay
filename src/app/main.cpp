@@ -15,6 +15,11 @@
 #include "framework/multiwindows/singleinstance.h"
 
 #include "muse_framework_config.h"
+#if defined(AU_TRIEFLOW_DISTRIBUTION) && defined(Q_OS_WIN)
+#include "../../distribution/startupdiagnostics.h"
+#include "framework/global/iglobalconfiguration.h"
+#include "framework/global/modularity/ioc.h"
+#endif
 
 #if (defined (_MSCVER) || defined (_MSC_VER))
 #include <vector>
@@ -220,6 +225,19 @@ int main(int argc, char** argv)
     std::shared_ptr<muse::IApplication> app = factory.newApp(commandLineParser.options());
 
     app->setup();
+
+#if defined(AU_TRIEFLOW_DISTRIBUTION) && defined(Q_OS_WIN)
+    // The global module has now configured its real logger, but no application
+    // context/main QML or user project has loaded. This opt-in only adds a
+    // bounded stderr diagnostic destination; it never reads profile contents.
+    if (qEnvironmentVariable("CI") == "true" && qEnvironmentVariable("WAVEQUAY_STARTUP_DIAGNOSTICS") == "1") {
+        const auto configuration = muse::modularity::globalIoc()->resolve<muse::IGlobalConfiguration>("app");
+        if (configuration) {
+            wavequay::installStartupDiagnostics(*muse::logger::Logger::instance(),
+                (configuration->userAppDataPath() + "/logs").toStdString(), "true", "1");
+        }
+    }
+#endif
 
     app->setupNewContext();
 

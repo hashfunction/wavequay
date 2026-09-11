@@ -155,3 +155,58 @@ dotnet build distribution/windows-gui/GuiProbe.csproj --nologo \
 fixtures. Passing these is evidence about the fail-closed policy, never evidence
 that WaveQuay displayed a window. The Windows helper self-test is similarly
 reported separately from actual WaveQuay qualification.
+
+## Actual logger diagnostic sink (run 34605794455)
+
+Exact Windows run `34605794455`, public snapshot
+`6f9361302e51270ab89dd78c1de63751fcf0cbcd`, again captured only the loading splash.
+All 40 host/private Trieflow log roots were absent, with zero collection errors,
+zero startup logs and zero onboarding events. The executed binary SHA256 was
+`caa6cabf934a9161a8cc2d8886d13e917ab97643ea834809df648fcde272be85`;
+the real failure screenshot SHA256 was
+`f5d652a19f4f682f3c98b6e7ec1d22a3844673b72cd8b0941f4a4f8bac46e8e7`.
+Owned cleanup passed. This evidence does not establish a QML error or the cause
+of the loading-screen stall.
+
+The new diagnostic stops guessing where Windows expanded the application path.
+Only in the Windows WaveQuay distribution, after `app->setup()` initializes the
+actual global configuration/logger and before context/main-QML loading,
+`CI=true` plus `WAVEQUAY_STARTUP_DIAGNOSTICS=1` enables an additional logger sink.
+It reports `IGlobalConfiguration::userAppDataPath() + "/logs"` directly, then
+mirrors warning/error messages to the already-captured stderr pipe. The observer
+sets both exact variables; the independent environment policy permits only those
+values. Neither variable changes configuration, title, logger level, dependency
+selection, loading behavior, observation budgets, profiles or acceptance gates.
+
+The sink retains all existing logger destinations. It does not copy/read profile
+files, emit info/debug settings or project dumps, or raise the logging level. The
+observer still requires a fresh disposable profile, no media arguments and owned
+process cleanup. Messages/tags are bounded (8 KiB/128 bytes); total sink output is
+at most 2 MiB including an explicit truncation marker. Writer failure disables the
+extra sink without changing application behavior. Windows writes directly to a
+validated `STD_ERROR_HANDLE` pipe, avoiding GUI-subsystem CRT stream assumptions;
+no new log file or arbitrary output path is opened. Output stays in the existing
+metadata-only `stderr.log` artifact. Native warnings/errors during this fresh
+startup may include source resource identifiers or diagnostic paths; this is not
+a general-purpose user-session logging facility.
+
+The headless native test compiles the unchanged real Kors logger with the new
+sink and Qt Core message handler using the production `KORS_LOGGER_QT_SUPPORT`
+definition. It checks explicit opt-in, exact configured destination, preservation of the
+existing file destination and its error output, info/debug exclusion, actual
+logger warning/error delivery, duplicate registration, truncation/budget and
+broken-writer handling. A separate real subprocess verifies the actual redirected
+stderr transport. It uses no Qt GUI, renderer, audio device or fabricated app
+success. This test runs inside the ordinary distribution suite before the long
+native app build, including the real Win32 pipe branch on Windows.
+
+RED: the new native test failed because `startupdiagnostics.cpp` was missing.
+Matching production Qt compilation also caught an initial helper method named
+`emit` colliding with Qt's keyword macro; renaming that private helper fixed the
+six reproduced compiler errors. The permanent fixture now exercises actual Qt
+warning/critical message delivery into the real logger, not a non-Qt substitute.
+GREEN: all 36 distribution tests pass on Python 3.10.11/AppleClang
+21.0.0.21000101; .NET SDK 10.0.401 cross-compiles the unchanged-policy observer
+with zero warnings/errors against locked net48 references. This still requires
+an exact-source Windows build/run to capture the real configured directory and
+native startup errors. No splash, title, audio/export or release gate is accepted.

@@ -54,8 +54,11 @@ def verify(report, inventory, evidence_dir, expected_commit):
     require(executable == stage / 'bin' / 'WaveQuay.exe', 'Wrong staged executable')
     env = {k.upper(): v for k, v in report['environment'].items()}
     allowed = {'PATH', 'SYSTEMROOT', 'WINDIR', 'SYSTEMDRIVE', 'COMSPEC', 'USERPROFILE', 'APPDATA',
-               'LOCALAPPDATA', 'TEMP', 'TMP', 'LANG', 'QT_FORCE_STDERR_LOGGING', 'QT_DEBUG_PLUGINS'}
+               'LOCALAPPDATA', 'TEMP', 'TMP', 'LANG', 'CI', 'WAVEQUAY_STARTUP_DIAGNOSTICS', 'QT_FORCE_STDERR_LOGGING', 'QT_DEBUG_PLUGINS'}
     require(set(env) <= allowed, 'Unexpected inherited environment')
+    if 'WAVEQUAY_STARTUP_DIAGNOSTICS' in env:
+        require(env['WAVEQUAY_STARTUP_DIAGNOSTICS'] == '1' and env.get('CI') == 'true',
+                'Startup diagnostics require exact disposable-CI opt-in')
     require([windows_path(p) for p in env['PATH'].split(';')] ==
             [stage / 'bin', system / 'System32', system], 'PATH contains runner/build dependencies')
     require(windows_path(env['SYSTEMROOT']) == system, 'Wrong system root')

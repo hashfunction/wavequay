@@ -180,6 +180,16 @@ class GuiEvidenceTests(unittest.TestCase):
         self.report['modules'].append(dict(path=r'C:\Windows\System32\Qt6Core.dll', sha256='0' * 64))
         self.reject()
 
+    def test_diagnostic_environment_requires_explicit_disposable_opt_in(self):
+        self.report['environment'].update(CI='true', WAVEQUAY_STARTUP_DIAGNOSTICS='1')
+        self.verify()
+        for value in ('false', 'TRUE', ''):
+            self.report['environment']['CI'] = value
+            self.reject()
+        self.report['environment']['CI'] = 'true'
+        self.report['environment']['WAVEQUAY_STARTUP_DIAGNOSTICS'] = 'true'
+        self.reject()
+
     def test_inherited_qt_environment_and_contaminated_path_rejected(self):
         self.report['environment']['QT_PLUGIN_PATH'] = r'D:\Qt\plugins'
         self.reject()

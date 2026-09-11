@@ -292,6 +292,7 @@ namespace WaveQuayQualification
                     { "COMSPEC", Path.Combine(system, "System32", "cmd.exe") },
                     { "USERPROFILE", privateRoot }, { "APPDATA", Path.Combine(privateRoot, "Roaming") },
                     { "LOCALAPPDATA", Path.Combine(privateRoot, "Local") }, { "TEMP", Path.Combine(privateRoot, "Temp") }, { "TMP", Path.Combine(privateRoot, "Temp") },
+                    { "CI", "true" }, { "WAVEQUAY_STARTUP_DIAGNOSTICS", "1" },
                     { "LANG", "en_US.UTF-8" }, { "QT_FORCE_STDERR_LOGGING", "1" }, { "QT_DEBUG_PLUGINS", "1" }
                 };
                 foreach (var variable in env) start.EnvironmentVariables.Add(variable.Key, variable.Value);
