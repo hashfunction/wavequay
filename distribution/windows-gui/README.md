@@ -210,3 +210,57 @@ GREEN: all 36 distribution tests pass on Python 3.10.11/AppleClang
 with zero warnings/errors against locked net48 references. This still requires
 an exact-source Windows build/run to capture the real configured directory and
 native startup errors. No splash, title, audio/export or release gate is accepted.
+
+## Disabled extension developer view (run 34612198983)
+
+Run [34612198983](https://github.com/hashfunction/wavequay/actions/runs/34612198983)
+at source `0a8416a484362d53b8e9fc1e7e8f3df66951a503` retained 24,025 bytes of
+stderr (SHA256 `862706205c3f0122b6e979bd505c64aa817199648d69a3d32622bb650e33086d`).
+The opt-in sink successfully reported the actual configured logger destination
+and the fatal main-window QML chain:
+
+```text
+Main.qml:77: WindowContent unavailable
+WindowContent.qml:100: DevToolsPage unavailable
+DevToolsPage.qml:176: ExtensionsListView unavailable
+ExtensionsListView.qml:12: DevExtensionsListModel is not a type
+```
+
+`MUSE_MODULE_EXTENSIONS=OFF` selects the existing Muse extensions stub, which
+provides its public panel/toolbar QML but no `DevExtensionsListModel`. Appshell
+still included the developer view that requires that model. Static QML type
+resolution reaches this view when the main window loads, even when DevTools is
+hidden. The appshell CMake source list now selects a local unavailable view when
+extensions are disabled, keeping the original resource alias and QML type name.
+The page explains that extensions are unavailable and has no extension actions.
+Extensions-enabled upstream builds retain the original view. No module,
+dependency, native code, title, timeout or acceptance policy is changed.
+
+The new `distribution/qml-module-tests` fixture executes the actual appshell
+CMake source selection and builds the selected real QML through Qt's resource
+and `qmldir` generation. A `QCoreApplication`/`QQmlComponent` loads both its exact
+resource URL and its generated named type, without opening any window. Three
+unrelated styled UI controls are minimal QtQuick test doubles; the extension
+stub's two QML files are the production files. The enabled-mode control supplies
+a test-only model registration, not the real extension service: the original
+view must fail without that registration and compile when it is supplied. This
+fixture proves the affected type/resource boundary, not full AppShell rendering,
+DevTools interactions, audio, or the enabled upstream extension subsystem.
+
+RED on the original source: the offline fixture failed at the same resource
+URL/line with `DevExtensionsListModel is not a type`; the upstream control passed.
+GREEN after the selection repair: both tests pass on Qt 6.11.2, CMake 3.26.4 and
+AppleClang 21, as do all 38 distribution tests. Run them before the native build:
+
+```sh
+python3 -m unittest discover -s distribution/tests -p test_qml_modules.py -v
+python3 -m unittest discover -s distribution/tests -v
+```
+
+The existing Windows qualifier already runs this suite after Qt setup. A fresh
+exact-source native build and actual staged onboarding/editor observation remain
+required. No GUI success follows from the isolated QML test. The logged legacy
+`Trieflow/Audacity4` data directory remains a separate release gate, as do earlier
+native audio/codec/license and package obligations. Qt's documented
+[`QT_RESOURCE_ALIAS` behavior](https://doc.qt.io/qt-6/qt-add-qml-module.html#caching-compiled-qml-sources)
+is used before the selected file is added to the module.

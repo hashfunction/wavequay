@@ -1,5 +1,14 @@
 muse_create_qml_module(appshell_qml FOR appshell)
 
+set(APPSHELL_EXTENSIONS_VIEW DevTools/Extensions/ExtensionsListView.qml)
+if(NOT MUSE_MODULE_EXTENSIONS)
+    # The framework stub does not register DevExtensionsListModel. Even a hidden
+    # DevTools page is resolved while the main window's QML is loaded.
+    set(APPSHELL_EXTENSIONS_VIEW DevTools/Extensions/stubs/ExtensionsListView.qml)
+    set_source_files_properties(${APPSHELL_EXTENSIONS_VIEW} PROPERTIES
+        QT_RESOURCE_ALIAS "DevTools/Extensions/ExtensionsListView.qml")
+endif()
+
 qt_add_qml_module(appshell_qml
     URI Audacity.AppShell
     VERSION 1.0
@@ -47,7 +56,7 @@ qt_add_qml_module(appshell_qml
         DevTools/CrashHandler/CrashHandlerDevTools.qml
         DevTools/DevToolsMenu.qml
         DevTools/DevToolsPage.qml
-        DevTools/Extensions/ExtensionsListView.qml
+        ${APPSHELL_EXTENSIONS_VIEW}
         DevTools/Gallery/GeneralComponentsGallery.qml
         DevTools/Interactive/InteractiveTests.qml
         DevTools/Interactive/SampleDialog.qml
