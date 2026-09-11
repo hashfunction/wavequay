@@ -88,8 +88,8 @@ application log, and installs a Qt message handler. `QT_FORCE_STDERR_LOGGING`
 does not override that handler. Empty stdout/stderr therefore does not mean
 there were no startup errors. After the owned helper/process tree stops, the
 outer launcher runs `collect_application_logs.py` on the prelaunch profile
-record. It copies only timestamped WaveQuay/Audacity startup `.log` files under
-recognized app roots that the observer proved absent before launch. It does not
+record and the actual recorded child environment. It copies only timestamped
+WaveQuay/Audacity startup `.log` files under recognized fresh app roots. It does not
 copy preferences, projects or arbitrary private-environment contents. Reparse
 paths and previously existing profiles are rejected. At most eight log tails
 of 2 MiB each are retained as `application-startup-*.log`; metadata records
@@ -97,13 +97,48 @@ original paths, sizes, offsets, truncation and captured SHA-256 hashes in
 `application-logs.json`. Existing artifact globs already include those files.
 Capture errors remain separate diagnostics and never manufacture GUI success.
 
+Private profile roots are accepted only when `USERPROFILE`, `APPDATA` and
+`LOCALAPPDATA` exactly match this report directory's `private-environment`,
+`private-environment/Roaming` and `private-environment/Local`. `GuiProbe.Run`
+rejects an existing private directory and creates those directories before it
+adds `environment` to the report. A report without that field authorizes no
+private capture. The collector derives the permitted Trieflow application
+subdirectories from this fixed layout; it does not accept another evidence
+directory, a parent traversal, or arbitrary paths supplied through environment
+variables. The private root and all ancestors must also pass the existing
+non-link/reparse checks. Host known-folder preflight remains required because
+Windows Qt APIs can still use it independently of the child environment.
+
 Windows run `34597342931` at snapshot
 `5fbfc2efa2dc5d1cb307f220ebfa8a651588bfa3` reached only the loading splash,
 not onboarding. Its stdout/stderr were empty and its application logs were not
 uploaded. The same splash-only result exists in run `34596275560`. This bounded
-collector repairs that evidence gap; the exact underlying startup failure and
+collector targeted host known folders; the exact underlying startup failure and
 actual editor qualification still require another native run. The exact title,
 onboarding, module-provenance and process-lifetime requirements remain intact.
+
+Run [34601015591](https://github.com/hashfunction/wavequay/actions/runs/34601015591)
+at public snapshot `14af4e955a1b5b84c266467bb0ff6e6ddf52e02e` reproduced the splash
+timeout with zero onboarding events. Its report records the private profile
+under `D:\a\wavequay\wavequay\build-evidence\gui\private-environment`, but the
+initial collector searched only absent `C:\Users\runneradmin\AppData` roots.
+The correction above includes the actual isolated Local/Roaming roots without
+broadening collection to preferences or arbitrary private-environment files.
+Downloaded `gui-observations.json` SHA256 is
+`83dab3032e745279eda3c34af037389f61b2cae3b7a05fc8f76b7b1764218465`;
+`application-logs.json` SHA256 is
+`28ca970386209e7c2397e3c2214b2939b4d4bdfa029fb20d08ee8b9889378b6b`.
+
+RED on local baseline `2e695ffc2f5a878ebfe9fe83886a6bceea409aa5`: the real-file
+fixture matching `build-evidence/gui/private-environment/{Local,Roaming}`
+captured **zero instead of two logs** while host app roots were absent.
+Cross-evidence paths, a traversal path and a redirected private root also lacked
+rejection. GREEN: all nine application-log methods pass, including those new
+cases; all 34 distribution tests, Python compilation and `git diff --check`
+pass. No product, dependency, observer, title, timeout or qualification-success
+policy changed. This remains a diagnostic repair: the splash cause, captured
+actual application errors and genuine editor qualification await another exact
+Windows run. The legacy Audacity data basename remains a separate open gate.
 
 ## Local development checks
 

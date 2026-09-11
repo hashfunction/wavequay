@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Trieflow LLC
-"""Retain bounded startup logs from the observer's previously absent app roots.
+"""Retain bounded startup logs from the observer's fresh host/private app roots.
 
 Muse sends Windows console/Qt messages to OutputDebugString and its own log
 file, so redirected stdout/stderr alone do not retain startup failures. This
@@ -29,18 +29,46 @@ def no_redirect(path):
             raise ValueError(f'Redirected diagnostic path: {item}')
 
 
+def private_app_roots(observation, output):
+    environment = observation.get('environment')
+    if environment is None:
+        # The observer can fail its host preflight before creating a private
+        # environment. Such reports authorize no private-root collection.
+        return []
+    private = output / 'private-environment'
+    expected = dict(USERPROFILE=private, APPDATA=private / 'Roaming',
+                    LOCALAPPDATA=private / 'Local')
+    for key, path in expected.items():
+        value = environment.get(key)
+        if not isinstance(value, str):
+            raise ValueError(f'Missing private diagnostic environment: {key}')
+        candidate = Path(value)
+        if not candidate.is_absolute() or '..' in candidate.parts or candidate != path:
+            raise ValueError(f'Private diagnostic environment escapes this report: {key}')
+        no_redirect(candidate)
+        if not candidate.is_dir():
+            raise ValueError(f'Private diagnostic environment is not a directory: {key}')
+    # GuiProbe.Run publishes environment only after rejecting an existing
+    # private-environment directory and creating these exact child directories.
+    # Derive paths here; never use arbitrary directories supplied in the report.
+    return [expected[key] / organization / app for key in ('APPDATA', 'LOCALAPPDATA')
+            for organization in sorted(ORGANIZATIONS) for app in sorted(APP_NAMES)]
+
+
 def collect(report_path):
+    report_path = report_path.absolute()
     output = report_path.parent
     result = dict(schemaVersion=1, files=[], roots=[], errors=[])
     try:
         no_redirect(output)
+        no_redirect(report_path)
         observation = json.loads(report_path.read_text(encoding='utf-8-sig'))
         state = observation.get('userStateBefore')
         if not isinstance(state, list) or not state or len(state) > 200:
             raise ValueError('Missing bounded fresh-profile preflight evidence')
         if any(entry.get('exists') is not False for entry in state):
             raise ValueError('Refusing logs from a profile not proven absent before launch')
-        roots = []
+        roots = private_app_roots(observation, output)
         for entry in state:
             root = Path(entry['path'])
             if root.name in APP_NAMES and root.parent.name in ORGANIZATIONS:

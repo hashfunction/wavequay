@@ -19,8 +19,8 @@ class ApplicationLogTests(unittest.TestCase):
         self.root = self.base / 'Local' / 'Trieflow' / 'Audacity4'
         self.logs = self.root / 'logs'
         self.logs.mkdir(parents=True)
-        self.output = self.base / 'evidence'
-        self.output.mkdir()
+        self.output = self.base / 'build-evidence' / 'gui'
+        self.output.mkdir(parents=True)
         self.report = self.output / 'gui-observations.json'
         self.observation = dict(userStateBefore=[dict(path=str(self.root), exists=False)])
         self.log = self.logs / 'WaveQuay_260911_123500.log'
@@ -104,6 +104,64 @@ class ApplicationLogTests(unittest.TestCase):
         self.assertEqual(metadata['files'], [])
         self.assertEqual(metadata['errors'], [])
         self.assertEqual(metadata['roots'][0]['exists'], False)
+
+    def private_environment(self):
+        # Exact GuiProbe.Run layout from run 34601015591: the host profile
+        # preflight remains separate from the child's cleared/rebuilt env.
+        private = self.output / 'private-environment'
+        self.observation['environment'] = dict(USERPROFILE=str(private),
+            APPDATA=str(private / 'Roaming'), LOCALAPPDATA=str(private / 'Local'))
+        for directory in (private / 'Roaming', private / 'Local', private / 'Temp'):
+            directory.mkdir(parents=True)
+        return private
+
+    def test_collects_actual_report_private_environment_with_absent_host_logs(self):
+        self.logs.rmdir()
+        self.root.rmdir()
+        private = self.private_environment()
+        for location, app in (('Local', 'Audacity4Development'), ('Roaming', 'WaveQuay')):
+            logs = private / location / 'Trieflow' / app / 'logs'
+            logs.mkdir(parents=True)
+            (logs / self.log.name).write_bytes(b'actual isolated startup error\n')
+            (logs.parent / 'preferences.ini').write_text('private preferences')
+            (logs / 'unrelated.txt').write_text('not an application log')
+        result, metadata = self.collect()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(metadata['files']), 2)
+        for entry in metadata['files']:
+            self.assertTrue(Path(entry['sourcePath']).is_relative_to(private))
+            self.assertEqual((self.output / entry['path']).read_bytes(), b'actual isolated startup error\n')
+
+    def test_private_environment_cannot_select_another_evidence_or_profile_root(self):
+        private = self.private_environment()
+        other = self.base / 'other-evidence' / 'private-environment'
+        for key, value in (('USERPROFILE', str(other)), ('APPDATA', str(other / 'Roaming')),
+                           ('LOCALAPPDATA', str(private / 'Local' / '..' / 'Local'))):
+            with self.subTest(key=key):
+                original = self.observation['environment'][key]
+                self.observation['environment'][key] = value
+                result, metadata = self.collect()
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(metadata['files'], [])
+                self.observation['environment'][key] = original
+
+    def test_redirected_private_environment_is_not_followed(self):
+        private = self.private_environment()
+        for directory in private.iterdir():
+            directory.rmdir()
+        private.rmdir()
+        target = self.base / 'private-profile'
+        logs = target / 'Local' / 'Trieflow' / 'Audacity4' / 'logs'
+        logs.mkdir(parents=True)
+        (logs / self.log.name).write_text('must stay private')
+        if sys.platform == 'win32':
+            subprocess.run(['cmd', '/c', 'mklink', '/J', str(private), str(target)], check=True,
+                           capture_output=True, text=True)
+        else:
+            private.symlink_to(target, target_is_directory=True)
+        result, metadata = self.collect()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(metadata['files'], [])
 
 
 if __name__ == '__main__':
