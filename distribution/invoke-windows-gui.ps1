@@ -22,7 +22,11 @@ foreach ($argument in @('-NoProfile','-NonInteractive','-STA','-ExecutionPolicy'
 if ($SelfTest) {
     $start.ArgumentList.Add('-SelfTest')
 } else {
-    foreach ($argument in @('-Stage',[IO.Path]::GetFullPath($Stage),'-SourceCommit',$SourceCommit)) { $start.ArgumentList.Add($argument) }
+    # Same checked source contract consumed independently by the verifier.
+    $expectedTitle = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'windows-gui/expected-main-window-title.txt')).TrimEnd([char[]]"`r`n")
+    if ([string]::IsNullOrWhiteSpace($expectedTitle) -or $expectedTitle -match '[\r\n]') { throw 'Invalid configured main-window title.' }
+    foreach ($argument in @('-Stage',[IO.Path]::GetFullPath($Stage),'-SourceCommit',$SourceCommit,
+        '-ExpectedMainWindowTitle',$expectedTitle)) { $start.ArgumentList.Add($argument) }
 }
 $child = [Diagnostics.Process]::new()
 $child.StartInfo = $start

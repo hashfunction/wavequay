@@ -20,6 +20,14 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def load_expected_title():
+    # Shared with the native launcher. A source-backed configure test compares
+    # this exact value with SetupConfigure.cmake's AU4_APP_TITLE_VERSION.
+    title = (Path(__file__).parent / 'windows-gui/expected-main-window-title.txt').read_text(encoding='utf-8').rstrip('\r\n')
+    require(bool(title.strip()) and '\r' not in title and '\n' not in title, 'Invalid expected main-window title')
+    return title
+
+
 def windows_path(value):
     path = PureWindowsPath(value)
     require(path.is_absolute() and '..' not in path.parts, 'Noncanonical absolute Windows path: ' + value)
@@ -33,6 +41,8 @@ def visible_node(event, name, pid, button=False):
 
 
 def verify(report, inventory, evidence_dir, expected_commit):
+    expected_title = load_expected_title()
+    require(report.get('expectedMainWindowTitle') == expected_title, 'Observer used a different expected title')
     require(report['schemaVersion'] == 1 and report['sourceCommit'] == expected_commit, 'Wrong evidence/source revision')
     require(len(expected_commit) == 40, 'Expected an exact source commit')
     require(report['errors'] == [] and report['survivedUntilCleanup'] is True, 'Startup error or early exit')
@@ -101,7 +111,7 @@ def verify(report, inventory, evidence_dir, expected_commit):
                     and event.get('focusedProcessId') == pid and event.get('foregroundProcessId') == pid,
                     'Keyboard input without verified accessible/foreground focus')
     for event in events[3:]:
-        require(event['kind'] == 'main-window' and event['title'] == 'WaveQuay 4', 'Wrong main window')
+        require(event['kind'] == 'main-window' and event['title'] == expected_title, 'Wrong main window')
         require(visible_node(event, 'Playback toolbar', pid) and visible_node(event, 'Add track', pid, button=True),
                 'Missing meaningful editing controls')
         require(not any(n.get('name') == 'Getting started' for n in event['tree']), 'Onboarding still covers editor')

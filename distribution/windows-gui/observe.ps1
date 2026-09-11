@@ -4,6 +4,7 @@ param(
     [string]$Stage,
     [Parameter(Mandatory=$true)][string]$EvidenceDirectory,
     [string]$SourceCommit,
+    [string]$ExpectedMainWindowTitle,
     [switch]$SelfTest
 )
 $ErrorActionPreference = 'Stop'
@@ -24,8 +25,8 @@ try {
         Write-Output 'PASS: real Windows job cleanup and UIA interop fixture. This is not WaveQuay GUI qualification.'
         exit 0
     }
-    if (-not $Stage -or $SourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Expected an exact stage and source commit.' }
-    exit ([WaveQuayQualification.GuiProbe]::Run($Stage, $EvidenceDirectory, $SourceCommit))
+    if (-not $Stage -or -not $ExpectedMainWindowTitle -or $SourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Expected an exact stage and source commit.' }
+    exit ([WaveQuayQualification.GuiProbe]::Run($Stage, $EvidenceDirectory, $SourceCommit, $ExpectedMainWindowTitle))
 } catch {
     $_ | Out-String | Set-Content -Encoding UTF8 (Join-Path $EvidenceDirectory 'helper-error.log')
     Write-Error $_

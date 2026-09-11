@@ -80,7 +80,6 @@ namespace WaveQuayQualification
 
     public static class GuiProbe
     {
-        private const string MainTitle = "WaveQuay 4";
         private static readonly string[] Pages = { "Select a theme", "Clip visualization", "What UI layout (workspace) do you want?" };
         private static readonly string[] Buttons = { "Next", "Next", "Accept & continue" };
         private static readonly JavaScriptSerializer Json = new JavaScriptSerializer { MaxJsonLength = 16000000 };
@@ -253,7 +252,7 @@ namespace WaveQuayQualification
             foreach (string path in roots) state.Add(D("path", path, "exists", Directory.Exists(path) || File.Exists(path)));
             return state;
         }
-        public static int Run(string stage, string directory, string sourceCommit)
+        public static int Run(string stage, string directory, string sourceCommit, string expectedMainWindowTitle)
         {
             SetProcessDPIAware();
             stage = Path.GetFullPath(stage).TrimEnd(Path.DirectorySeparatorChar);
@@ -265,7 +264,7 @@ namespace WaveQuayQualification
             var events = new List<Dictionary<string, object>>();
             var errors = new List<string>();
             var report = D("schemaVersion", 1, "sourceCommit", sourceCommit, "stageRoot", stage, "systemRoot", system,
-                "executable", executable, "arguments", new string[0], "events", events, "errors", errors, "survivedUntilCleanup", false,
+                "executable", executable, "expectedMainWindowTitle", expectedMainWindowTitle, "arguments", new string[0], "events", events, "errors", errors, "survivedUntilCleanup", false,
                 "cleanup", D("ownedJobClosed", false, "processExited", false));
             Process process = null;
             OwnedJob job = null;
@@ -273,6 +272,8 @@ namespace WaveQuayQualification
             var clock = Stopwatch.StartNew();
             try
             {
+                if (String.IsNullOrWhiteSpace(expectedMainWindowTitle) || expectedMainWindowTitle.IndexOfAny(new[] { '\r', '\n' }) >= 0)
+                    throw new ArgumentException("Expected a single exact configured main-window title");
                 NoReparsePath(stage);
                 if (!File.Exists(executable) || (File.GetAttributes(executable) & FileAttributes.ReparsePoint) != 0)
                     throw new IOException("Missing or redirected staged WaveQuay executable");
@@ -348,7 +349,7 @@ namespace WaveQuayQualification
                     {
                         foreach (var window in windows)
                         {
-                            if (window.Current.Name != MainTitle || window.Current.IsOffscreen) continue;
+                            if (window.Current.Name != expectedMainWindowTitle || window.Current.IsOffscreen) continue;
                             var tree = Tree(window);
                             if (!Has(tree, "Playback toolbar", process.Id, false) || !Has(tree, "Add track", process.Id, true)) continue;
                             if (firstMain >= 0 && clock.ElapsedMilliseconds - firstMain < 3000) continue;

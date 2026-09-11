@@ -6,6 +6,7 @@ import importlib.util
 import json
 from pathlib import Path
 import struct
+import subprocess
 import tempfile
 import unittest
 import zlib
@@ -14,6 +15,35 @@ VERIFIER = Path(__file__).resolve().parents[1] / 'verify_gui_evidence.py'
 
 
 class GuiEvidenceTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Evaluate the real complete release SetupConfigure, including version.cmake
+        # and its final add_compile_definitions. No duplicate title formula or stubs.
+        root = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            (source / 'CMakeLists.txt').write_text(
+                'cmake_minimum_required(VERSION 3.24)\nproject(TitleContract LANGUAGES C CXX)\n'
+                f'set(MUSE_FRAMEWORK_SRC_PATH "{(root / "muse/framework").as_posix()}")\n'
+                f'list(APPEND CMAKE_MODULE_PATH "{root.as_posix()}" '
+                f'"{(root / "muse/buildscripts/cmake").as_posix()}" '
+                f'"{(root / "muse/framework/cmake").as_posix()}")\n'
+                'include(SetupConfigure)\n'
+                'get_directory_property(definitions COMPILE_DEFINITIONS)\n'
+                'file(WRITE "${CMAKE_BINARY_DIR}/definitions.txt" "${definitions}")\n', encoding='utf-8')
+            configured = subprocess.run(['cmake', '-S', str(source), '-B', str(source / 'build'), '-G', 'Ninja',
+                '-C', str(root / 'buildscripts/ci/windows/wavequay-release.cmake')], capture_output=True, text=True)
+            if configured.returncode:
+                raise AssertionError(configured.stdout + configured.stderr)
+            definitions = (source / 'build/definitions.txt').read_text(encoding='utf-8').split(';')
+            title_definitions = [d for d in definitions if d.startswith('AU4_APP_TITLE_VERSION=')]
+            if len(title_definitions) != 1:
+                raise AssertionError(f'Expected exactly one actual compiler title definition: {definitions}')
+            quoted_title = title_definitions[0].removeprefix('AU4_APP_TITLE_VERSION=')
+            if not (quoted_title.startswith('"') and quoted_title.endswith('"')):
+                raise AssertionError(f'Expected a quoted compiler title: {quoted_title!r}')
+            cls.production_title = quoted_title[1:-1]
+
     def setUp(self):
         self.assertTrue(VERIFIER.is_file(), 'Staged GUI evidence verifier is not implemented')
         spec = importlib.util.spec_from_file_location('gui_evidence', VERIFIER)
@@ -33,7 +63,7 @@ class GuiEvidenceTests(unittest.TestCase):
                           for name in ('WaveQuay.exe', 'Qt6Core.dll', 'Qt6Gui.dll', 'Qt6Qml.dll', 'Qt6Quick.dll', 'qwindows.dll')]
         self.report = dict(schemaVersion=1, sourceCommit='a' * 40, stageRoot=r'D:\a\stage', systemRoot=r'C:\Windows',
                            executable=r'D:\a\stage\bin\WaveQuay.exe', executableSha256=self.inventory[0]['sha256'],
-                           processId=123, arguments=[], survivedUntilCleanup=True, errors=[],
+                           processId=123, arguments=[], expectedMainWindowTitle=self.production_title, survivedUntilCleanup=True, errors=[],
                            cleanup=dict(ownedJobClosed=True, processExited=True),
                            userStateBefore=[dict(path=r'C:\Users\runner\AppData\Local\Trieflow LLC\WaveQuay', exists=False)],
                            environment={'PATH': r'D:\a\stage\bin;C:\Windows\System32;C:\Windows', 'SystemRoot': r'C:\Windows'},
@@ -44,7 +74,7 @@ class GuiEvidenceTests(unittest.TestCase):
                 processId=123, elapsedMs=1000 + index * 1500, interaction='uia-invoke',
                 tree=[self.node(page, 'Pane'), self.node(button, 'Button', invoke=True)], screenshot=copy.deepcopy(self.screenshot)))
         for when in (6000, 9500):
-            self.report['events'].append(dict(kind='main-window', title='WaveQuay 4', processId=123, elapsedMs=when,
+            self.report['events'].append(dict(kind='main-window', title=self.production_title, processId=123, elapsedMs=when,
                 tree=[self.node('Playback toolbar', 'ToolBar'), self.node('Add track', 'Button', invoke=True)],
                 screenshot=copy.deepcopy(self.screenshot)))
 
@@ -60,7 +90,20 @@ class GuiEvidenceTests(unittest.TestCase):
             self.verify()
 
     def test_complete_staged_observations_pass(self):
-        self.verify()
+        try:
+            self.verify()
+        except ValueError as error:
+            self.fail(f'Rejected actual configured title {self.production_title!r}: {error}')
+
+    def test_shared_title_matches_actual_release_compile_definition(self):
+        self.assertEqual(self.module.load_expected_title(), self.production_title)
+
+    def test_main_window_title_matching_remains_exact(self):
+        for title in (self.production_title.rsplit('.', 1)[0], self.production_title + ' extra',
+                      self.production_title + ' ', 'prefix ' + self.production_title):
+            with self.subTest(title=title):
+                self.report['events'][-1]['title'] = title
+                self.reject()
 
     def test_missing_main_window_rejects_splash_only(self):
         self.report['events'] = self.report['events'][:3]

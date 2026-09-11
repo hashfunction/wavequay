@@ -55,8 +55,17 @@ after verifying the exact focused UIA name “page title. button title” and th
 owned foreground process. It does not use unverified coordinates, generic Enter,
 private QML calls, test-only startup switches, or injected configuration.
 
+The launcher and independent verifier consume the single exact title in
+`expected-main-window-title.txt`. Before the native build, the distribution suite
+configures a minimal compiler-enabled project with the **actual complete**
+`SetupConfigure.cmake`, `version.cmake` and release preset, reads its final
+`AU4_APP_TITLE_VERSION` compiler definition, and compares that value with this
+file. No title formula is duplicated in the fixtures. Version/title drift fails
+this preflight; matching remains exact, without prefix or whitespace tolerance.
+The observer records which expected title it used and the verifier checks it.
+
 Completion requires all three observed pages, genuine PNG captures, and two
-“WaveQuay 4” editing-window observations at least three seconds apart. Both must
+“WaveQuay 4.0” editing-window observations at least three seconds apart. Both must
 contain the visible enabled Playback toolbar and Add track button. Unexpected
 modal/native/error dialogs and early process exit fail. Screenshots must be of
 the owned foreground window, entirely on the visible desktop, at least 400x300,
