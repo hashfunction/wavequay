@@ -123,6 +123,23 @@ namespace WaveQuayQualification
             foreach (AutomationElement window in windows) result.Add(window);
             return result;
         }
+        private static bool TryWindow<T>(AutomationElement window, Func<AutomationElement, T> operation, out T value)
+        {
+            try
+            {
+                value = operation(window);
+                return true;
+            }
+            catch (ElementNotAvailableException)
+            {
+                // Top-level UIA elements are snapshots of native windows. A
+                // splash/onboarding transition may destroy one after FindAll
+                // and before its properties or descendants are read. Only
+                // this documented stale-element condition is retryable.
+                value = default(T);
+                return false;
+            }
+        }
         private static void Visit(AutomationElement node, int depth, List<Dictionary<string, object>> tree)
         {
             if (depth > 40 || tree.Count >= 3000) throw new InvalidOperationException("UI Automation tree exceeded bounded capture");
@@ -147,17 +164,27 @@ namespace WaveQuayQualification
             return tree.Exists(n => (string)n["name"] == name && (int)n["processId"] == pid && (bool)n["enabled"]
                 && !(bool)n["offscreen"] && (!button || (string)n["controlType"] == "Button"));
         }
-        private static void RejectDialogs(List<AutomationElement> windows, bool onboardingAllowed)
+        private static void RejectDialogs(List<AutomationElement> windows, bool onboardingAllowed, ref int transientAutomationElements)
         {
             foreach (var window in windows)
             {
-                var c = window.Current;
-                if (onboardingAllowed && c.Name == "Getting started") continue;
-                object p;
-                bool modal = window.TryGetCurrentPattern(WindowPattern.Pattern, out p) && ((WindowPattern)p).Current.IsModal;
-                if (!c.IsOffscreen && (modal || c.ClassName == "#32770"
-                    || Regex.IsMatch(c.Name, @"\b(error|fatal|exception|warning)\b", RegexOptions.IgnoreCase)))
-                    throw new InvalidOperationException("Unexpected native/modal dialog: " + c.Name);
+                string problem;
+                if (!TryWindow(window, candidate =>
+                {
+                    var c = candidate.Current;
+                    if (onboardingAllowed && c.Name == "Getting started") return null;
+                    object p;
+                    bool modal = candidate.TryGetCurrentPattern(WindowPattern.Pattern, out p) && ((WindowPattern)p).Current.IsModal;
+                    if (!c.IsOffscreen && (modal || c.ClassName == "#32770"
+                        || Regex.IsMatch(c.Name, @"\b(error|fatal|exception|warning)\b", RegexOptions.IgnoreCase)))
+                        return "Unexpected native/modal dialog: " + c.Name;
+                    return null;
+                }, out problem))
+                {
+                    transientAutomationElements++;
+                    continue;
+                }
+                if (problem != null) throw new InvalidOperationException(problem);
             }
         }
         private static Dictionary<string, object> Screenshot(AutomationElement window, string directory, string filename, int pid)
@@ -265,11 +292,12 @@ namespace WaveQuayQualification
             var errors = new List<string>();
             var report = D("schemaVersion", 1, "sourceCommit", sourceCommit, "stageRoot", stage, "systemRoot", system,
                 "executable", executable, "expectedMainWindowTitle", expectedMainWindowTitle, "arguments", new string[0], "events", events, "errors", errors, "survivedUntilCleanup", false,
-                "cleanup", D("ownedJobClosed", false, "processExited", false));
+                "transientAutomationElements", 0, "cleanup", D("ownedJobClosed", false, "processExited", false));
             Process process = null;
             OwnedJob job = null;
             StreamWriter stdout = null, stderr = null;
             var clock = Stopwatch.StartNew();
+            int transientAutomationElements = 0;
             try
             {
                 if (String.IsNullOrWhiteSpace(expectedMainWindowTitle) || expectedMainWindowTitle.IndexOfAny(new[] { '\r', '\n' }) >= 0)
@@ -322,52 +350,65 @@ namespace WaveQuayQualification
                     var windows = Windows(process.Id);
                     var diagnostics = new List<object>();
                     foreach (var window in windows)
-                        diagnostics.Add(D("title", window.Current.Name, "tree", Tree(window)));
+                    {
+                        Dictionary<string, object> diagnostic;
+                        if (TryWindow(window, candidate => D("title", candidate.Current.Name, "tree", Tree(candidate)), out diagnostic))
+                            diagnostics.Add(diagnostic);
+                        else transientAutomationElements++;
+                    }
                     Save(Path.Combine(directory, "latest-ui-tree.json"), diagnostics);
-                    RejectDialogs(windows, page < 3);
+                    RejectDialogs(windows, page < 3, ref transientAutomationElements);
                     if (page < 3)
                     {
                         foreach (var window in windows)
                         {
-                            if (window.Current.Name != "Getting started" || window.Current.IsOffscreen) continue;
-                            var tree = Tree(window);
-                            if (!Has(tree, Pages[page], process.Id, false) && !Has(tree, Pages[page] + ". " + Buttons[page], process.Id, true)) continue;
-                            // Allow the source's one-second page accessibility timer to settle.
-                            Thread.Sleep(1200);
-                            tree = Tree(window);
-                            var observation = D("kind", "onboarding", "title", window.Current.Name, "page", Pages[page], "button", Buttons[page],
-                                "processId", process.Id, "elapsedMs", clock.ElapsedMilliseconds, "tree", tree,
-                                "screenshot", Screenshot(window, directory, "onboarding-" + (page + 1) + ".png", process.Id));
-                            events.Add(observation);
-                            Save(reportPath, report);
-                            Advance(window, observation, Pages[page], Buttons[page], process.Id);
-                            Save(reportPath, report);
-                            page++;
-                            break;
+                            try
+                            {
+                                if (window.Current.Name != "Getting started" || window.Current.IsOffscreen) continue;
+                                var tree = Tree(window);
+                                if (!Has(tree, Pages[page], process.Id, false) && !Has(tree, Pages[page] + ". " + Buttons[page], process.Id, true)) continue;
+                                // Allow the source's one-second page accessibility timer to settle.
+                                Thread.Sleep(1200);
+                                tree = Tree(window);
+                                var observation = D("kind", "onboarding", "title", window.Current.Name, "page", Pages[page], "button", Buttons[page],
+                                    "processId", process.Id, "elapsedMs", clock.ElapsedMilliseconds, "tree", tree,
+                                    "screenshot", Screenshot(window, directory, "onboarding-" + (page + 1) + ".png", process.Id));
+                                events.Add(observation);
+                                Save(reportPath, report);
+                                Advance(window, observation, Pages[page], Buttons[page], process.Id);
+                                Save(reportPath, report);
+                                page++;
+                                break;
+                            }
+                            catch (ElementNotAvailableException) { transientAutomationElements++; }
                         }
                     }
                     else
                     {
                         foreach (var window in windows)
                         {
-                            if (window.Current.Name != expectedMainWindowTitle || window.Current.IsOffscreen) continue;
-                            var tree = Tree(window);
-                            if (!Has(tree, "Playback toolbar", process.Id, false) || !Has(tree, "Add track", process.Id, true)) continue;
-                            if (firstMain >= 0 && clock.ElapsedMilliseconds - firstMain < 3000) continue;
-                            var observation = D("kind", "main-window", "title", window.Current.Name, "processId", process.Id,
-                                "elapsedMs", clock.ElapsedMilliseconds, "tree", tree,
-                                "screenshot", Screenshot(window, directory, firstMain < 0 ? "main-window-initial.png" : "main-window-stable.png", process.Id));
-                            events.Add(observation);
-                            report["modules"] = Modules(process);
-                            Save(reportPath, report);
-                            if (firstMain >= 0)
+                            try
                             {
-                                Alive(process);
-                                report["survivedUntilCleanup"] = true;
-                                return 0;
+                                if (window.Current.Name != expectedMainWindowTitle || window.Current.IsOffscreen) continue;
+                                var tree = Tree(window);
+                                if (!Has(tree, "Playback toolbar", process.Id, false) || !Has(tree, "Add track", process.Id, true)) continue;
+                                if (firstMain >= 0 && clock.ElapsedMilliseconds - firstMain < 3000) continue;
+                                var observation = D("kind", "main-window", "title", window.Current.Name, "processId", process.Id,
+                                    "elapsedMs", clock.ElapsedMilliseconds, "tree", tree,
+                                    "screenshot", Screenshot(window, directory, firstMain < 0 ? "main-window-initial.png" : "main-window-stable.png", process.Id));
+                                events.Add(observation);
+                                report["modules"] = Modules(process);
+                                Save(reportPath, report);
+                                if (firstMain >= 0)
+                                {
+                                    Alive(process);
+                                    report["survivedUntilCleanup"] = true;
+                                    return 0;
+                                }
+                                firstMain = clock.ElapsedMilliseconds;
+                                break;
                             }
-                            firstMain = clock.ElapsedMilliseconds;
-                            break;
+                            catch (ElementNotAvailableException) { transientAutomationElements++; }
                         }
                     }
                     Thread.Sleep(300);
@@ -385,11 +426,18 @@ namespace WaveQuayQualification
                         {
                             report["modules"] = Modules(process);
                             foreach (var window in Windows(process.Id))
-                                if (!window.Current.IsOffscreen)
+                            {
+                                try
                                 {
-                                    report["failureScreenshot"] = Screenshot(window, directory, "failure-window.png", process.Id);
-                                    break;
+                                    if (!window.Current.IsOffscreen)
+                                    {
+                                        report["failureScreenshot"] = Screenshot(window, directory, "failure-window.png", process.Id);
+                                        break;
+                                    }
                                 }
+                                catch (ElementNotAvailableException) { transientAutomationElements++; }
+                                catch (InvalidOperationException diagnosticError) { errors.Add("Diagnostics: " + diagnosticError); }
+                            }
                         }
                         else report["earlyExitCode"] = process.ExitCode;
                     }
@@ -421,6 +469,7 @@ namespace WaveQuayQualification
                 }
                 catch (Exception error) { errors.Add("Owned job cleanup: " + error); }
                 report["cleanup"] = D("ownedJobClosed", closed, "processExited", exited);
+                report["transientAutomationElements"] = transientAutomationElements;
                 report["finishedUtc"] = DateTime.UtcNow.ToString("o");
                 Save(reportPath, report);
                 if (exited)
@@ -434,6 +483,18 @@ namespace WaveQuayQualification
 
         public static string SelfTest()
         {
+            string ignored;
+            bool staleIgnored = !TryWindow<string>(AutomationElement.RootElement,
+                element => { throw new ElementNotAvailableException("Destroyed native-window fixture"); }, out ignored);
+            bool otherErrorPropagated = false;
+            try
+            {
+                TryWindow<string>(AutomationElement.RootElement,
+                    element => { throw new InvalidOperationException("Non-stale fixture"); }, out ignored);
+            }
+            catch (InvalidOperationException) { otherErrorPropagated = true; }
+            if (!staleIgnored || !otherErrorPropagated)
+                throw new InvalidOperationException("Transient UIA exception boundary self-test failed");
             // Real Windows interop fixture, not product GUI qualification.
             var start = new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),
                 "WindowsPowerShell", "v1.0", "powershell.exe"), "-NoProfile -NonInteractive -Command Start-Sleep -Seconds 60")
@@ -452,7 +513,8 @@ namespace WaveQuayQualification
                 }
                 finally { if (!child.HasExited) child.Kill(); }
             }
-            return Json.Serialize(D("ownedJobCleanup", true, "desktopUiaName", AutomationElement.RootElement.Current.Name,
+            return Json.Serialize(D("ownedJobCleanup", true, "staleAutomationElementIgnored", staleIgnored,
+                "nonStaleAutomationErrorPropagated", otherErrorPropagated, "desktopUiaName", AutomationElement.RootElement.Current.Name,
                 "uiaAssembly", typeof(AutomationElement).Assembly.Location, "framework", Environment.Version.ToString(),
                 "windows", Environment.OSVersion.ToString()));
         }

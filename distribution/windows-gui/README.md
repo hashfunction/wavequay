@@ -264,3 +264,29 @@ required. No GUI success follows from the isolated QML test. The logged legacy
 native audio/codec/license and package obligations. Qt's documented
 [`QT_RESOURCE_ALIAS` behavior](https://doc.qt.io/qt-6/qt-add-qml-module.html#caching-compiled-qml-sources)
 is used before the selected file is added to the module.
+
+## Transient Windows UI Automation elements (run 34634334561)
+
+Run `34634334561` built and staged the exact public snapshot
+`f059347e2909d69ddc51e3d4df5c197fad51e9b3`, then the observer failed before
+recording an onboarding event. The retained report shows that the application
+was still running, had loaded 149 modules (59 from the inventoried stage), and
+owned cleanup succeeded. Its 29,260-byte native stderr has SHA256
+`b9dc11001da53fb22328e91c1161b72fe4a3ba41e861511c1ac83326b1efdb8d`.
+It contains no fatal main-QML chain or missing QML type. The observer's first
+error is `ElementNotAvailableException` while reading `Current.Name` from a
+top-level UIA element returned by the immediately preceding desktop enumeration.
+The element was destroyed between those operations, as can happen while a
+splash or onboarding window transitions. A later best-effort failure screenshot
+found a visible native window with implausibly small/off-desktop bounds.
+
+The observer now retries only `ElementNotAvailableException` at each top-level
+window inspection boundary. Other UIA, screenshot, modal-dialog, process, title,
+control and timeout errors remain fatal. The number of discarded stale elements
+is retained in `transientAutomationElements`; it does not create an event or
+satisfy any acceptance gate. The native Windows helper self-test exercises the
+exact stale exception and proves that a different exception still propagates.
+Local locked-reference compilation succeeds with zero warnings and all 38
+distribution tests pass. A fresh Windows run must execute that self-test and
+still capture three real onboarding pages plus two stable editor observations
+before GUI qualification can pass.
