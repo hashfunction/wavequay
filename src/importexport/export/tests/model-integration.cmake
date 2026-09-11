@@ -73,6 +73,10 @@ add_executable(exportpreferencesmodel_recipe_tests
     "${WAVEQUAY_GLOBAL}/settings.cpp" "${WAVEQUAY_GLOBAL}/runtime.cpp"
 )
 set_target_properties(exportpreferencesmodel_recipe_tests PROPERTIES AUTOMOC ON)
+# The real model and GoogleMock interfaces exceed classic COFF section limits.
+if(MSVC)
+    target_compile_options(exportpreferencesmodel_recipe_tests PRIVATE /bigobj)
+endif()
 target_compile_definitions(exportpreferencesmodel_recipe_tests PRIVATE KORS_LOGGER_QT_SUPPORT)
 target_include_directories(exportpreferencesmodel_recipe_tests PRIVATE
     "${WAVEQUAY_SOURCE_ROOT}/src" "${WAVEQUAY_SOURCE_ROOT}/src/appshell"
