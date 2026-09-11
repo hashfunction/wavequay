@@ -115,12 +115,39 @@ namespace WaveQuayQualification
             for (var info = new DirectoryInfo(path); info != null; info = info.Parent)
                 if ((info.Attributes & FileAttributes.ReparsePoint) != 0) throw new IOException("Reparse-point path: " + info.FullName);
         }
-        private static List<AutomationElement> Windows(int processId)
+        private static List<AutomationElement> Windows(int processId, ref int transientAutomationElements)
         {
             var result = new List<AutomationElement>();
-            var windows = AutomationElement.RootElement.FindAll(TreeScope.Children,
+            var handles = new HashSet<int>();
+            var roots = AutomationElement.RootElement.FindAll(TreeScope.Children,
                 new PropertyCondition(AutomationElement.ProcessIdProperty, processId));
-            foreach (AutomationElement window in windows) result.Add(window);
+            // An owned QQuickView can be a descendant of the main UIA window,
+            // rather than a direct desktop child. Search only these PID roots.
+            foreach (AutomationElement root in roots)
+            {
+                try
+                {
+                    var windows = root.FindAll(TreeScope.Element | TreeScope.Descendants,
+                        new AndCondition(new PropertyCondition(AutomationElement.ProcessIdProperty, processId),
+                            new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Window)));
+                    if (windows.Count > 3000) throw new InvalidOperationException("Owned UIA window collection exceeded bound");
+                    foreach (AutomationElement window in windows)
+                    {
+                        try
+                        {
+                            var current = window.Current;
+                            uint nativePid;
+                            if (current.ProcessId != processId || current.NativeWindowHandle == 0
+                                || GetWindowThreadProcessId(new IntPtr(current.NativeWindowHandle), out nativePid) == 0
+                                || nativePid != (uint)processId)
+                                throw new InvalidOperationException("UIA/native window ownership differs from the retained process");
+                            if (handles.Add(current.NativeWindowHandle)) result.Add(window);
+                        }
+                        catch (ElementNotAvailableException) { transientAutomationElements++; }
+                    }
+                }
+                catch (ElementNotAvailableException) { transientAutomationElements++; }
+            }
             return result;
         }
         private static bool TryWindow<T>(AutomationElement window, Func<AutomationElement, T> operation, out T value)
@@ -148,6 +175,7 @@ namespace WaveQuayQualification
             bool invoke = node.TryGetCurrentPattern(InvokePattern.Pattern, out pattern);
             tree.Add(D("name", current.Name, "automationId", current.AutomationId, "controlType", current.ControlType.ProgrammaticName.Replace("ControlType.", ""),
                 "className", current.ClassName, "processId", current.ProcessId, "enabled", current.IsEnabled,
+                "nativeWindowHandle", current.NativeWindowHandle,
                 "offscreen", current.IsOffscreen, "invoke", invoke,
                 "bounds", new double[] { current.BoundingRectangle.X, current.BoundingRectangle.Y, current.BoundingRectangle.Width, current.BoundingRectangle.Height }));
             var walker = TreeWalker.RawViewWalker;
@@ -347,7 +375,7 @@ namespace WaveQuayQualification
                 while (clock.ElapsedMilliseconds < 90000)
                 {
                     Alive(process);
-                    var windows = Windows(process.Id);
+                    var windows = Windows(process.Id, ref transientAutomationElements);
                     var diagnostics = new List<object>();
                     foreach (var window in windows)
                     {
@@ -425,7 +453,7 @@ namespace WaveQuayQualification
                         if (!process.HasExited)
                         {
                             report["modules"] = Modules(process);
-                            foreach (var window in Windows(process.Id))
+                            foreach (var window in Windows(process.Id, ref transientAutomationElements))
                             {
                                 try
                                 {

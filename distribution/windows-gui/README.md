@@ -320,3 +320,40 @@ GREEN: all 39 distribution tests pass locally, including the existing native
 QML module and logger fixtures. A fresh Windows build must still observe all
 three real onboarding pages, the stable editor, process survival, and owned
 cleanup. This local repair is not a Windows GUI qualification result.
+
+## Owned descendant onboarding window (run 34645251326)
+
+Run `34645251326` at public snapshot
+`3bac2d0c8993328ee27274fb4d8518a8f93555cf` built and staged successfully but
+recorded no onboarding events before its 90-second timeout. Its retained UIA
+record contains one desktop child, `WaveQuay 4.0`, whose subtree contains an
+owned, visible `Getting started` Window (`QQuickView`, PID 1532, bounds
+232/143/560/442). The previous discovery method considered only desktop children,
+so it never considered that descendant for the required onboarding steps.
+The native stderr no longer contains the prior missing `floating` property error.
+No failure screenshot was retained: the screenshot geometry check rejected the
+candidate it encountered. These records do not establish that all required page
+controls are accessible or that the editor qualifies.
+
+Discovery now searches Window elements within each exact-PID desktop root,
+including that root. Each candidate must also have a nonzero native HWND whose
+Win32 owner is the retained application PID; duplicate HWNDs are removed. Stale
+UIA elements are counted and retried, while other provider/identity errors remain
+fatal. The next diagnostic tree records native HWND values. The original artifact
+had no HWND field, so the repair does not assume that its descendant was a native
+top-level window. This application-scoped traversal follows Microsoft's
+[UI Automation search guidance](https://learn.microsoft.com/en-us/dotnet/framework/ui-automation/obtaining-ui-automation-elements)
+and avoids searching all descendants of the desktop.
+
+`test_window_discovery.py` compiles and executes the actual C# discovery method
+against portable UIA/Win32 adapters modeling the recorded hierarchy. It reproduces
+omission of the owned popup before the repair, then verifies discovery, duplicate
+removal, foreign UIA/native PIDs, zero HWNDs, stale elements and propagation of
+other errors. The adapters use synthetic HWNDs: this is a regression of the
+observer method, not native Windows UIA or app GUI evidence. It requires a .NET
+SDK (8 or newer; optionally selected with `WAVEQUAY_TEST_DOTNET`). The complete
+observer also cross-compiles against the locked .NET Framework 4.8 references.
+All exact title, three-page/control/action, foreground screenshot, module,
+process-lifetime, timeout, and cleanup checks remain required on the next actual
+Windows run. Missing controls still fail; discovery alone creates no accepted
+event.
