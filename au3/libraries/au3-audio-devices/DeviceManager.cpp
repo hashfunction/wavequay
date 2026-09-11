@@ -15,7 +15,9 @@
 #include "portaudio.h"
 #ifdef __WXMSW__
 #include <windows.h>
+#ifndef AU_TRIEFLOW_DISTRIBUTION
 #include "pa_asio.h"
+#endif
 #include "pa_win_wasapi.h"
 #endif
 
@@ -353,7 +355,7 @@ bool DeviceManager::IsAsioDevice(int paDeviceIndex)
 
 // ASIO devices are enumerated lazily (driver names only)
 // to prevent sound interruptions in other running programs
-#ifdef __WXMSW__
+#if defined(__WXMSW__) && !defined(AU_TRIEFLOW_DISTRIBUTION)
 static wxString AsioCacheKeyRoot(const char* deviceName)
 {
     wxString escaped = wxSafeConvertMB2WX(deviceName);
@@ -365,7 +367,7 @@ static wxString AsioCacheKeyRoot(const char* deviceName)
 
 static void ApplyCachedAsioDeviceInfo()
 {
-#ifdef __WXMSW__
+#if defined(__WXMSW__) && !defined(AU_TRIEFLOW_DISTRIBUTION)
     const int deviceCount = Pa_GetDeviceCount();
     for (int i = 0; i < deviceCount; i++) {
         if (!DeviceManager::IsAsioDevice(i)) {
@@ -390,7 +392,7 @@ static void ApplyCachedAsioDeviceInfo()
 
 double DeviceManager::GetAsioDeviceCurrentSampleRate(int paDeviceIndex)
 {
-#ifdef __WXMSW__
+#if defined(__WXMSW__) && !defined(AU_TRIEFLOW_DISTRIBUTION)
     if (!IsAsioDevice(paDeviceIndex)) {
         return 0.0;
     }
@@ -416,7 +418,7 @@ double DeviceManager::GetAsioDeviceCurrentSampleRate(int paDeviceIndex)
 
 void DeviceManager::ShowAsioControlPanel(int paDeviceIndex)
 {
-#ifdef __WXMSW__
+#if defined(__WXMSW__) && !defined(AU_TRIEFLOW_DISTRIBUTION)
     if (IsAsioDevice(paDeviceIndex)) {
         PaAsio_ShowControlPanel(paDeviceIndex, GetDesktopWindow());
     }
