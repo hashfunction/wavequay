@@ -12,7 +12,7 @@ class DistributionConfigurationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             script = pathlib.Path(directory) / "configure.cmake"
             script.write_text(
-                f'include("{ROOT / "distribution/ConfigureWaveQuay.cmake"}")\n'
+                f'include("{(ROOT / "distribution/ConfigureWaveQuay.cmake").as_posix()}")\n'
                 'if(AU_BUILD_CLOUD_AUDIOCOM OR AU_BUILD_USAGEINFO_MODULE OR MUSE_MODULE_NETWORK)\n'
                 ' message(FATAL_ERROR "Remote modules remain enabled")\nendif()\n'
             )
@@ -46,8 +46,8 @@ class DistributionConfigurationTests(unittest.TestCase):
                 ' if("-DPA_USE_ASIO=ON" IN_LIST DEP_CMAKE_ARGS)\n'
                 '  message(FATAL_ERROR "ASIO was enabled")\n endif()\n'
                 'endfunction()\n'
-                f'include("{ROOT / "distribution/recipes/portaudio/spec.cmake"}")\n'
-                f'include("{ROOT / "distribution/recipes/portaudio/build.cmake"}")\n'
+                f'include("{(ROOT / "distribution/recipes/portaudio/spec.cmake").as_posix()}")\n'
+                f'include("{(ROOT / "distribution/recipes/portaudio/build.cmake").as_posix()}")\n'
             )
             result = subprocess.run(["cmake", "-DCMAKE_POLICY_DEFAULT_CMP0057=NEW", "-P", str(script)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)

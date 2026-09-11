@@ -17,7 +17,14 @@ $submodules | Set-Content build-evidence/submodules.txt
 cmake --version | Set-Content build-evidence/cmake.txt
 qmake -query | Set-Content build-evidence/qt.txt
 $env:EXTDEPS_CACHE = Join-Path (Get-Location) '.ci-dependency-cache'
+$sourceCommit = (git rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Cannot identify exact source revision.' }
+$result = @{ source_commit=$sourceCommit; built=$false; native_recipe_tests=$false; staged=$false;
+    windows_main_window_verified=$false; audio_device_tests=$false; native_export_tests=$false;
+    source_license_closure=$false; submitted=$false }
 try {
+    Invoke-Checked python @('-m','unittest','discover','-s','distribution/tests','-v')
+    & ./distribution/invoke-windows-gui.ps1 -SelfTest -EvidenceDirectory (Join-Path (Get-Location) 'build-evidence/gui-helper')
     Invoke-Checked cmake @('-S','.ci-googletest','-B','build-gtest','-G','Ninja','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CXX_STANDARD=17','-Dgtest_force_shared_crt=ON','-DBUILD_GMOCK=ON',"-DCMAKE_INSTALL_PREFIX=$(Get-Location)/.ci-gtest-install")
     Invoke-Checked cmake @('--build','build-gtest','--parallel','2')
     Invoke-Checked cmake @('--install','build-gtest')
@@ -26,14 +33,22 @@ try {
     Copy-Item build-recipe-tests/wavequay-test-dependencies.json build-evidence/
     Invoke-Checked cmake @('--build','build-recipe-tests','--parallel','2')
     Invoke-Checked ctest @('--test-dir','build-recipe-tests','--timeout','60','--output-on-failure','--output-junit',"$(Get-Location)/build-evidence/recipe-tests.xml")
+    $result.native_recipe_tests = $true
     Invoke-Checked cmake @('-C','buildscripts/ci/windows/wavequay-release.cmake','-S','.','-B','build','-G','Ninja','-DMUSE_ENABLE_UNIT_TESTS=OFF','-DAU_BUILD_EXPORT_TESTS=OFF',"-DCMAKE_INSTALL_PREFIX=$(Get-Location)/stage")
     Invoke-Checked cmake @('--build','build','--parallel','2')
+    $result.built = $true
     Invoke-Checked cmake @('--install','build')
+    $result.staged = $true
     Get-ChildItem stage -Recurse -File | ForEach-Object {
         @{ path=[IO.Path]::GetRelativePath((Join-Path (Get-Location) 'stage'), $_.FullName); bytes=$_.Length; sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash }
     } | ConvertTo-Json -Depth 3 | Set-Content build-evidence/stage-inventory.json
-    @{ source_commit=$env:GITHUB_SHA; built=$true; native_recipe_tests=$true; staged=$true; windows_main_window_verified=$false; audio_device_tests=$false; source_license_closure=$false; submitted=$false } | ConvertTo-Json | Set-Content build-evidence/result.json
+    $result | ConvertTo-Json | Set-Content build-evidence/result.json
+    & ./distribution/invoke-windows-gui.ps1 -SourceCommit $sourceCommit
+    Invoke-Checked python @('distribution/verify_gui_evidence.py','--report','build-evidence/gui/gui-observations.json',
+        '--inventory','build-evidence/stage-inventory.json','--source-commit',$sourceCommit)
+    $result.windows_main_window_verified = $true
 } finally {
+    $result | ConvertTo-Json | Set-Content build-evidence/result.json
     Get-ChildItem .qt-archives,.ci-dependency-cache -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in @('.zip','.7z','.gz','.xz','.bz2','.zst','.tar') } | ForEach-Object {
         @{ path=[IO.Path]::GetRelativePath((Get-Location).Path, $_.FullName); bytes=$_.Length; sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash }
     } | ConvertTo-Json -Depth 3 | Set-Content build-evidence/dependency-downloads.json
