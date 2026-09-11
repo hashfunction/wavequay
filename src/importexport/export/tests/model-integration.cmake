@@ -86,3 +86,7 @@ target_include_directories(exportpreferencesmodel_recipe_tests PRIVATE
 target_link_libraries(exportpreferencesmodel_recipe_tests PRIVATE
     Qt6::Core Qt6::Gui Qt6::Qml Qt6::Widgets GTest::gmock)
 add_test(NAME exportpreferencesmodel_recipe_tests COMMAND exportpreferencesmodel_recipe_tests)
+
+# Repeated suite construction/destruction must release settings subscriptions and mocks.
+add_test(NAME exportpreferencesmodel_recipe_lifecycle_repeat
+    COMMAND exportpreferencesmodel_recipe_tests --gtest_repeat=20 --gtest_shuffle --gtest_random_seed=28643)

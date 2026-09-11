@@ -55,12 +55,31 @@ class ExportModelRecipes : public Test
 protected:
     inline static std::shared_ptr<ExportConfiguration> configuration;
     inline static std::shared_ptr<NiceMock<muse::GlobalConfigurationMock>> globalConfiguration;
+    inline static std::weak_ptr<ExportConfiguration> configurationLifetime;
+    inline static std::weak_ptr<muse::IGlobalConfiguration> globalConfigurationLifetime;
     static void SetUpTestSuite()
     {
         globalConfiguration = std::make_shared<NiceMock<muse::GlobalConfigurationMock>>();
         muse::modularity::globalIoc()->registerExport<muse::IGlobalConfiguration>("recipe-tests", globalConfiguration);
         configuration = std::make_shared<ExportConfiguration>();
+        configurationLifetime = configuration;
+        globalConfigurationLifetime = globalConfiguration;
         configuration->init();
+    }
+    static void TearDownTestSuite()
+    {
+        muse::settings()->rollbackTransaction(false);
+        configuration.reset();
+        muse::modularity::globalIoc()->unregister<muse::IGlobalConfiguration>("recipe-tests");
+        globalConfiguration.reset();
+        EXPECT_NE(QCoreApplication::instance(), nullptr);
+        EXPECT_TRUE(configurationLifetime.expired()) << "Suite configuration must be destroyed before Qt/GMock shutdown";
+        EXPECT_TRUE(globalConfigurationLifetime.expired()) << "Suite mock must not survive in static storage or global IoC";
+        EXPECT_EQ(muse::modularity::globalIoc()->resolve<muse::IGlobalConfiguration>("recipe-tests"), nullptr);
+        for (const auto& entry : muse::settings()->items()) {
+            EXPECT_FALSE(muse::settings()->valueChanged(entry.first).isConnected())
+                << "Dangling settings receiver: " << entry.first.key;
+        }
     }
     QTemporaryDir directory;
     muse::modularity::ContextPtr context = au::testutils::makeTestContext();

@@ -82,3 +82,31 @@ and still needs Windows qualification.
 The standalone tests exercise the production store/controller and descriptor
 validation. They do not instantiate the full Muse QML context, real encoding,
 or device/export cancellation. Those are release gates, not inferred results.
+
+## Model-test lifetime qualification
+
+Windows run 34588196628 built the two test executables after the MSVC `/bigobj`
+repair. All 24 individual tests reported success, but the real-model process
+segfaulted after its 11-test summary; CTest correctly treated the run as failed.
+The same crash did not reproduce on the macOS host.
+
+The fixture now explicitly rolls back pending settings, destroys its real export
+configuration, unregisters the owned global configuration service and releases
+its NiceMock in `TearDownTestSuite`. Weak-reference and IoC assertions verify that
+neither service survives the suite and that Qt still exists. Assertions also
+inspect the real settings channels for remaining receivers. Those checks failed
+first: 35 lifetime failures, then 32 connected callbacks after ownership cleanup.
+
+`ExportConfiguration` previously captured `this` in 32 settings subscriptions with
+a null receiver, leaving callbacks behind when the configuration was destroyed.
+It now uses its Asyncable lifetime as receiver and disconnects before its members
+are destroyed. Callback contents, export option values and renderer behavior are
+unchanged. This production lifetime repair is required for safe fixture teardown
+and repeated use of the actual configuration; settings/model code is not stubbed.
+
+The existing 11 model/options tests remain intact. CTest also runs them twenty
+times in one process with deterministic shuffle seeds, exercising repeated suite
+setup and teardown. Local qualification passed the 24 distinct tests, that repeat
+target and ten separate model-process exits. No exit-code suppression, abandoned
+mock or leaked service is used. The Windows process-exit result still requires a
+new native run; local success does not establish the Windows crash is resolved.

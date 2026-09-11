@@ -4,17 +4,19 @@
 #pragma once
 
 #include "modularity/ioc.h"
+#include "async/asyncable.h"
 #include "global/iglobalconfiguration.h"
 
 #include "../iexportconfiguration.h"
 
 namespace au::importexport {
-class ExportConfiguration : public IExportConfiguration
+class ExportConfiguration : public IExportConfiguration, public muse::async::Asyncable
 {
     muse::GlobalInject<muse::IGlobalConfiguration> globalConfiguration;
 
 public:
     ExportConfiguration() = default;
+    ~ExportConfiguration() override { async_disconnectAll(); }
 
     void init();
 
