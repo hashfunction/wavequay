@@ -33,7 +33,8 @@ public:
         ExportChannels,
         ExportCustomChannelMapping,
         ExportSampleRate,
-        Parameters
+        Parameters,
+        TrimBlankSpace
     };
 
     using Options = std::map<OptionKey, muse::Val>;

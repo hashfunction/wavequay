@@ -607,6 +607,9 @@ QStringList ExportPreferencesModel::fileFilter()
 
 void ExportPreferencesModel::exportData()
 {
+    // Dialogs run nested event loops; capture the request before asking consent.
+    const auto options = currentExportOptions();
+    muse::io::path_t filePath = exportConfiguration()->directoryPath().appendingComponent(filename());
     bool needToDisableMasterFx = needToDisableMasterFxBeforeExport();
     if (needToDisableMasterFx) {
         if (!warnAndDisableMasterFxBeforeExport()) {
@@ -622,11 +625,8 @@ void ExportPreferencesModel::exportData()
         }
     });
 
-    muse::io::path_t directoryPath = exportConfiguration()->directoryPath();
-    muse::io::path_t filePath = directoryPath.appendingComponent(filename());
-
     if (suffix(filePath).empty()) {
-        auto extensions = exporter()->formatExtensions(exportConfiguration()->currentFormat());
+        auto extensions = exporter()->formatExtensions(options.at(IExporter::OptionKey::Format).toString());
         std::string defaultExtension;
         if (!extensions.empty()) {
             defaultExtension = extensions.front();
@@ -646,9 +646,10 @@ void ExportPreferencesModel::exportData()
         }
     }
 
-    muse::Ret result = exporter()->exportData(filePath, currentExportOptions());
-    if (!result.success() && !result.text().empty()) {
-        interactive()->error(muse::trc("export", "Export error"), result.text());
+    muse::Ret result = exporter()->exportData(filePath, options);
+    if (!result.success()) {
+        if (!result.text().empty())
+            interactive()->error(muse::trc("export", "Export error"), result.text());
         return;
     }
 
@@ -721,6 +722,20 @@ ExportRecipe ExportPreferencesModel::capture() const
 }
 RecipeResult<ExportRecipeFormat> ExportPreferencesModel::describe(const ExportRecipe& r) const
 {
+    if (r.channelType == ExportChannelsPref::ExportChannels::CUSTOM) {
+        size_t inputChannels = 0;
+        const auto project = globalContext()->currentTrackeditProject();
+        if (project) {
+            for (const auto& track : project->trackList()) {
+                if (track.type != trackedit::TrackType::Label)
+                    inputChannels += track.type == trackedit::TrackType::Stereo ? 2 : 1;
+            }
+        }
+        if (r.channelMapping.size() != inputChannels)
+            return { { RecipeError::Invalid,
+                         "This recipe's channel mapping does not match the current project inputs. Create a new mapping for this project.",
+                         { } }, { } };
+    }
     if (r.process == ExportProcessType::AUDIO_IN_LOOP_REGION && !playbackController()->loopRegion().isValid())
         return { { RecipeError::Invalid, "Create a loop region before applying this recipe.", { } }, { } };
     if (r.process == ExportProcessType::SELECTED_AUDIO && selectionController()->timeSelectionIsEmpty()
@@ -729,7 +744,7 @@ RecipeResult<ExportRecipeFormat> ExportPreferencesModel::describe(const ExportRe
     const auto format = exporter()->recipeFormat(r.format, r.parameters);
     if (!format)
         return { { RecipeError::Invalid,
-                     "Recipe format or settings are unavailable. Custom FFmpeg recipes are not supported; choose a standard export format.",
+                     "Recipe format or settings are unavailable. Custom FFmpeg and Other uncompressed recipes are not supported; choose WAV or another standard export format.",
                      { } },
             { } };
     return { { }, *format };
@@ -762,6 +777,7 @@ IExporter::Options ExportPreferencesModel::currentExportOptions() const
     return { { IExporter::OptionKey::Format, muse::Val(r.format) }, { IExporter::OptionKey::ProcessType, muse::Val(r.process) },
         { IExporter::OptionKey::ExportChannelsType, muse::Val(int(r.channelType)) },
         { IExporter::OptionKey::ExportChannels, muse::Val(r.channels) },
+        { IExporter::OptionKey::TrimBlankSpace, muse::Val(r.trimBlankSpace) },
         { IExporter::OptionKey::ExportCustomChannelMapping, utils::matrixToVal(r.channelMapping) },
         { IExporter::OptionKey::ExportSampleRate, muse::Val(r.sampleRate) }, { IExporter::OptionKey::Parameters, muse::Val(parameters) } };
 }

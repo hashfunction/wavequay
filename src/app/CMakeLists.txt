@@ -188,7 +188,7 @@ endif()
 # Resources
 ###########################################
 if(AU_TRIEFLOW_DISTRIBUTION)
-    qt_add_resources(APP_RCC_SOURCES ${PROJECT_SOURCE_DIR}/distribution/wavequay-app.qrc)
+    qt_add_resources(APP_RCC_SOURCES ${PROJECT_SOURCE_DIR}/distribution/app.qrc)
 else()
     qt_add_resources(APP_RCC_SOURCES app.qrc)
 endif()

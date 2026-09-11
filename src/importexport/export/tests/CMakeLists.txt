@@ -28,3 +28,5 @@ target_include_directories(exportrecipestore_tests PRIVATE
     "${WAVEQUAY_SOURCE_ROOT}/src" "${WAVEQUAY_SOURCE_ROOT}/muse")
 target_link_libraries(exportrecipestore_tests PRIVATE Qt6::Core GTest::gtest_main)
 add_test(NAME exportrecipestore_tests COMMAND exportrecipestore_tests)
+
+include(${CMAKE_CURRENT_LIST_DIR}/model-integration.cmake)

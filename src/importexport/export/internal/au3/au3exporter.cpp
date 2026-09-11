@@ -37,33 +37,6 @@ ExportPlugin* formatPlugin(const std::string& format)
 
     return nullptr;
 }
-
-std::vector<bool> prepareChannelMask(TrackList& trackList, bool selectedOnly)
-{
-    auto tracks = trackList.Any<WaveTrack>();
-    std::vector<bool> channelMask(
-        tracks.sum([](const auto track) { return track->NChannels(); }),
-        false);
-    unsigned trackIndex = 0;
-    for (const auto track : tracks) {
-        if (track->GetSolo()) {
-            channelMask.assign(channelMask.size(), false);
-            for (unsigned i = 0; i < track->NChannels(); ++i) {
-                channelMask[trackIndex++] = true;
-            }
-            break;
-        }
-        if (!track->GetMute() && (!selectedOnly || track->GetSelected())) {
-            for (unsigned i = 0; i < track->NChannels(); ++i) {
-                channelMask[trackIndex++] = true;
-            }
-        } else {
-            trackIndex += track->NChannels();
-        }
-    }
-
-    return channelMask;
-}
 }
 
 class ProgressDelegate : public ExportProcessorDelegate, public muse::async::Asyncable
@@ -178,6 +151,8 @@ muse::Ret Au3Exporter::exportData(const muse::io::path_t& path, const Options& o
                                  ? options.at(OptionKey::ExportSampleRate).toInt()
                                  : exportConfiguration()->exportSampleRate();
 
+    const bool trimBlankSpace = utils::resolveTrimBlankSpace(options, exportConfiguration()->trimBlankSpace());
+
     ExportParameters parameters;
     if (options.count(OptionKey::Parameters)) {
         for (const auto& entryVal : options.at(OptionKey::Parameters).toList()) {
@@ -266,7 +241,7 @@ muse::Ret Au3Exporter::exportData(const muse::io::path_t& path, const Options& o
         return muse::make_ret(muse::Ret::Code::InternalError, muse::trc("export", "All selected audio is muted"));
     }
 
-    if (exportConfiguration()->trimBlankSpace()) {
+    if (trimBlankSpace) {
         const double firstClipStart = exportedTracks.min(&Track::GetStartTime);
         if (firstClipStart > m_t0 && firstClipStart < m_t1) {
             m_t0 = firstClipStart;
@@ -279,39 +254,33 @@ muse::Ret Au3Exporter::exportData(const muse::io::path_t& path, const Options& o
     }
 
     auto downMix = std::make_unique<MixerOptions::Downmix>(inputChannelsCount, exportChannels);
+    m_mixerSpec = nullptr;
     if (ExportChannelsPref::ExportChannels(exportChannelsType) == ExportChannelsPref::ExportChannels::MONO) {
         m_numChannels = 1;
     } else if (ExportChannelsPref::ExportChannels(exportChannelsType)
                == ExportChannelsPref::ExportChannels::STEREO) {
         m_numChannels = 2;
     } else {
-        //Figure out the final channel mapping: mixer dialog shows
-        //all tracks regardless of their mute/solo state, but
-        //muted channels should not be present in exported file -
-        //apply channel mask to exclude them
-        auto& trackList = TrackList::Get(*au3Project);
-        auto channelMask = prepareChannelMask(trackList, m_selectedOnly);
-        downMix = std::make_unique<MixerOptions::Downmix>(*downMix, channelMask);
-        m_mixerSpec = downMix.get();
-
-        const std::vector<std::vector<bool> > matrix = utils::valToMatrix(exportCustomChannelMapping);
+        // Recipe rows are in full-project order. Filter by the actual export
+        // selection, including mute/solo, before filling the smaller mixer.
+        std::vector<bool> exportedInputs;
+        for (const auto track : TrackList::Get(*au3Project).Any<WaveTrack>()) {
+            const bool included = std::any_of(exportedTracks.begin(), exportedTracks.end(),
+                [track](const auto exportedTrack) { return track == exportedTrack; });
+            exportedInputs.insert(exportedInputs.end(), track->NChannels(), included);
+        }
+        const auto matrix = utils::exportChannelMapping(utils::valToMatrix(exportCustomChannelMapping),
+                                                        exportedInputs, exportChannels);
+        if (!matrix || matrix->size() != size_t(inputChannelsCount)) {
+            return muse::make_ret(muse::Ret::Code::InternalError,
+                muse::trc("export", "Channel mapping no longer matches this project. Create a new mapping before exporting."));
+        }
         m_numChannels = exportChannels;
-
-        for (int in = 0; in < inputChannelsCount; ++in) {
-            for (unsigned int out = 0; out < m_numChannels; ++out) {
-                m_mixerSpec->mMap[in][out] = false;
-            }
-        }
-
-        const int rows = std::min(inputChannelsCount, static_cast<int>(matrix.size()));
-        for (int in = 0; in < rows; ++in) {
-            const int cols = std::min(static_cast<int>(m_numChannels), static_cast<int>(matrix[in].size()));
-            for (int out = 0; out < cols; ++out) {
-                if (matrix[in][out]) {
-                    m_mixerSpec->mMap[in][out] = true;
-                }
-            }
-        }
+        downMix->SetNumChannels(exportChannels);
+        m_mixerSpec = downMix.get();
+        for (int in = 0; in < inputChannelsCount; ++in)
+            for (unsigned int out = 0; out < m_numChannels; ++out)
+                m_mixerSpec->mMap[in][out] = (*matrix)[in][out];
     }
 
     m_sampleRate = exportSampleRate;
@@ -623,9 +592,11 @@ std::optional<ExportRecipeFormat> Au3Exporter::recipeFormat(const std::string& f
     for (auto [plugin, index] : ExportPluginRegistry::Get()) {
         if (plugin->GetFormatInfo(index).description.msgid().toStdString() != format) continue;
         auto editor = plugin->CreateOptionsEditor(index, nullptr);
-        // Custom FFmpeg options include separately stored codec state not
-        // represented by this editor. Never pretend that state is a recipe.
-        if (!editor || editor->GetName() == "custom_ffmpeg") return std::nullopt;
+        // Custom FFmpeg has separately stored codec state. The generic PCM
+        // editor writes gPrefs inside SetValue even without a listener. Neither
+        // can be inspected as a recipe without mutating live preferences.
+        // Fixed WAV/AIFF use the separate, isolated pcm_sf_typed editor.
+        if (!editor || editor->GetName() == "custom_ffmpeg" || editor->GetName() == "pcm_sf") return std::nullopt;
         editor->Load(*gPrefs);
         for (const auto& [id,value] : parameters) {
             ::ExportValue current;
@@ -653,7 +624,8 @@ std::optional<ExportRecipeFormat> Au3Exporter::recipeFormat(const std::string& f
             result.options.push_back({option.id,option.title.translated().toStdString(),option.flags,option.values,names});
             result.values.emplace(option.id,value);
         }
-        // Store() is intentionally never called: this is a private candidate editor.
+        // Only isolated editors reach here; neither the candidate path nor its
+        // setters persist live preferences.
         return result;
     }
     return std::nullopt;

@@ -4,6 +4,27 @@
 
 #include "exportutils.h"
 
+bool au::importexport::utils::resolveTrimBlankSpace(const IExporter::Options& options, bool defaultValue)
+{
+    const auto it = options.find(IExporter::OptionKey::TrimBlankSpace);
+    return it == options.end() ? defaultValue : it->second.toBool();
+}
+
+std::optional<std::vector<std::vector<bool> > > au::importexport::utils::exportChannelMapping(
+    const std::vector<std::vector<bool> >& matrix, const std::vector<bool>& exportedInputs, int outputChannels)
+{
+    if (matrix.size() != exportedInputs.size() || outputChannels < 1)
+        return std::nullopt;
+    std::vector<std::vector<bool> > result;
+    for (size_t input = 0; input < matrix.size(); ++input) {
+        if (matrix[input].size() != size_t(outputChannels))
+            return std::nullopt;
+        if (exportedInputs[input])
+            result.push_back(matrix[input]);
+    }
+    return result;
+}
+
 muse::Val au::importexport::utils::matrixToVal(const std::vector<std::vector<bool> >& matrix)
 {
     muse::ValList rows;

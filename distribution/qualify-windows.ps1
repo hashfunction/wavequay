@@ -18,11 +18,12 @@ cmake --version | Set-Content build-evidence/cmake.txt
 qmake -query | Set-Content build-evidence/qt.txt
 $env:EXTDEPS_CACHE = Join-Path (Get-Location) '.ci-dependency-cache'
 try {
-    Invoke-Checked cmake @('-S','.ci-googletest','-B','build-gtest','-G','Ninja','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CXX_STANDARD=17','-Dgtest_force_shared_crt=ON','-DBUILD_GMOCK=OFF',"-DCMAKE_INSTALL_PREFIX=$(Get-Location)/.ci-gtest-install")
+    Invoke-Checked cmake @('-S','.ci-googletest','-B','build-gtest','-G','Ninja','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CXX_STANDARD=17','-Dgtest_force_shared_crt=ON','-DBUILD_GMOCK=ON',"-DCMAKE_INSTALL_PREFIX=$(Get-Location)/.ci-gtest-install")
     Invoke-Checked cmake @('--build','build-gtest','--parallel','2')
     Invoke-Checked cmake @('--install','build-gtest')
     $env:CMAKE_PREFIX_PATH = "$(Get-Location)/.ci-gtest-install;$env:CMAKE_PREFIX_PATH"
     Invoke-Checked cmake @('-S','src/importexport/export/tests','-B','build-recipe-tests','-G','Ninja','-DCMAKE_BUILD_TYPE=Release')
+    Copy-Item build-recipe-tests/wavequay-test-dependencies.json build-evidence/
     Invoke-Checked cmake @('--build','build-recipe-tests','--parallel','2')
     Invoke-Checked ctest @('--test-dir','build-recipe-tests','--timeout','60','--output-on-failure','--output-junit',"$(Get-Location)/build-evidence/recipe-tests.xml")
     Invoke-Checked cmake @('-C','buildscripts/ci/windows/wavequay-release.cmake','-S','.','-B','build','-G','Ninja','-DMUSE_ENABLE_UNIT_TESTS=OFF','-DAU_BUILD_EXPORT_TESTS=OFF',"-DCMAKE_INSTALL_PREFIX=$(Get-Location)/stage")
