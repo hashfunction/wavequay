@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Trieflow LLC
-// Runs only on a disposable Windows CI desktop. No WaveQuay/Qt code is loaded
+// Runs only on a disposable Windows CI desktop. No WaveWeft/Qt code is loaded
 // into this .NET Framework UI Automation observer.
 using System;
 using System.Collections.Generic;
@@ -130,7 +130,7 @@ namespace WaveQuayQualification
         }
         private static void Alive(Process process)
         {
-            if (process.HasExited) throw new InvalidOperationException("WaveQuay exited early with code " + process.ExitCode);
+            if (process.HasExited) throw new InvalidOperationException("WaveWeft exited early with code " + process.ExitCode);
         }
         private static void NoReparsePath(string path)
         {
@@ -382,7 +382,7 @@ namespace WaveQuayQualification
             // alone is not profile isolation. Never erase or inject preferences.
             var roots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var folder in new[] { Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolder.ApplicationData })
-                foreach (var app in new[] { "Audacity4Development", "Audacity4", "WaveQuay", "WaveQuay4", "WaveQuay 4" })
+                foreach (var app in new[] { "Audacity4Development", "Audacity4", "WaveQuay", "WaveQuay4", "WaveQuay 4", "WaveWeft", "WaveWeft1", "WaveWeft 1" })
                 {
                     // main.cpp currently uses Trieflow / Audacity4Development.
                     // QSettings' non-portable INI is beside, not inside, the app directory.
@@ -404,7 +404,7 @@ namespace WaveQuayQualification
             directory = Path.GetFullPath(directory);
             Directory.CreateDirectory(directory);
             string system = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-            string executable = Path.Combine(stage, "bin", "WaveQuay.exe");
+            string executable = Path.Combine(stage, "bin", "WaveWeft.exe");
             string reportPath = Path.Combine(directory, "gui-observations.json");
             var events = new List<Dictionary<string, object>>();
             var errors = new List<string>();
@@ -422,12 +422,12 @@ namespace WaveQuayQualification
                     throw new ArgumentException("Expected a single exact configured main-window title");
                 NoReparsePath(stage);
                 if (!File.Exists(executable) || (File.GetAttributes(executable) & FileAttributes.ReparsePoint) != 0)
-                    throw new IOException("Missing or redirected staged WaveQuay executable");
+                    throw new IOException("Missing or redirected staged WaveWeft executable");
                 NoReparsePath(Path.GetDirectoryName(executable));
                 var state = FreshState();
                 report["userStateBefore"] = state;
                 Save(reportPath, report);
-                if (state.Exists(entry => (bool)entry["exists"])) throw new IOException("WaveQuay profile state already exists; need a fresh disposable runner");
+                if (state.Exists(entry => (bool)entry["exists"])) throw new IOException("WaveWeft profile state already exists; need a fresh disposable runner");
                 string privateRoot = Path.Combine(directory, "private-environment");
                 if (Directory.Exists(privateRoot)) throw new IOException("GUI probe environment already exists; use a new evidence directory");
                 var start = new ProcessStartInfo(executable) { UseShellExecute = false, WorkingDirectory = Path.Combine(stage, "bin"), RedirectStandardOutput = true, RedirectStandardError = true };

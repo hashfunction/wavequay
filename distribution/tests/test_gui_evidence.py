@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-"""Synthetic policy fixtures, not GUI execution or screenshots of WaveQuay."""
+"""Synthetic policy fixtures, not GUI execution or screenshots of WaveWeft."""
 import copy
 import hashlib
 import importlib.util
@@ -30,11 +30,13 @@ class GuiEvidenceTests(unittest.TestCase):
                 f'"{(root / "muse/framework/cmake").as_posix()}")\n'
                 'include(SetupConfigure)\n'
                 'get_directory_property(definitions COMPILE_DEFINITIONS)\n'
-                'file(WRITE "${CMAKE_BINARY_DIR}/definitions.txt" "${definitions}")\n', encoding='utf-8')
+                'file(WRITE "${CMAKE_BINARY_DIR}/definitions.txt" "${definitions}")\n'
+                'file(WRITE "${CMAKE_BINARY_DIR}/brand.txt" "${MUSE_APP_NAME}\\n${MUSE_APP_VERSION}\\n${MUSE_APP_GUI_IDENTIFIER}")\n', encoding='utf-8')
             configured = subprocess.run(['cmake', '-S', str(source), '-B', str(source / 'build'), '-G', 'Ninja',
                 '-C', str(root / 'buildscripts/ci/windows/wavequay-release.cmake')], capture_output=True, text=True)
             if configured.returncode:
                 raise AssertionError(configured.stdout + configured.stderr)
+            cls.production_brand = (source / 'build/brand.txt').read_text(encoding='utf-8').splitlines()
             definitions = (source / 'build/definitions.txt').read_text(encoding='utf-8').split(';')
             title_definitions = [d for d in definitions if d.startswith('AU4_APP_TITLE_VERSION=')]
             if len(title_definitions) != 1:
@@ -66,9 +68,9 @@ class GuiEvidenceTests(unittest.TestCase):
         (self.directory / 'fixture.png').write_bytes(png)
         self.screenshot = dict(path='fixture.png', sha256=hashlib.sha256(png).hexdigest(), width=800, height=600, sampledColors=256)
         self.inventory = [dict(path='bin/' + name, sha256=hashlib.sha256(name.encode()).hexdigest(), bytes=100)
-                          for name in ('WaveQuay.exe', 'Qt6Core.dll', 'Qt6Gui.dll', 'Qt6Qml.dll', 'Qt6Quick.dll', 'qwindows.dll')]
+                          for name in ('WaveWeft.exe', 'Qt6Core.dll', 'Qt6Gui.dll', 'Qt6Qml.dll', 'Qt6Quick.dll', 'qwindows.dll')]
         self.report = dict(schemaVersion=1, sourceCommit='a' * 40, stageRoot=r'D:\a\stage', systemRoot=r'C:\Windows',
-                           executable=r'D:\a\stage\bin\WaveQuay.exe', executableSha256=self.inventory[0]['sha256'],
+                           executable=r'D:\a\stage\bin\WaveWeft.exe', executableSha256=self.inventory[0]['sha256'],
                            processId=123, arguments=[], expectedMainWindowTitle=self.production_title, survivedUntilCleanup=True, errors=[],
                            cleanup=dict(ownedJobClosed=True, processExited=True),
                            userStateBefore=[dict(path=r'C:\Users\runner\AppData\Local\Trieflow LLC\WaveQuay', exists=False)],
@@ -100,6 +102,18 @@ class GuiEvidenceTests(unittest.TestCase):
             self.verify()
         except ValueError as error:
             self.fail(f'Rejected actual configured title {self.production_title!r}: {error}')
+
+    def test_distribution_brand_and_version_come_from_actual_configuration(self):
+        self.assertEqual(self.production_brand, ['WaveWeft', '1.0.1', 'com.trieflow.WaveQuay'])
+        self.assertEqual(self.production_title, 'WaveWeft 1.0.1')
+
+    def test_old_brand_title_and_executable_are_rejected(self):
+        original = copy.deepcopy(self.report)
+        self.report['events'][-1]['title'] = 'WaveQuay 4.0'
+        self.reject()
+        self.report = original
+        self.report['executable'] = r'D:\a\stage\bin\WaveQuay.exe'
+        self.reject()
 
     def test_shared_title_matches_actual_release_compile_definition(self):
         self.assertEqual(self.module.load_expected_title(), self.production_title)

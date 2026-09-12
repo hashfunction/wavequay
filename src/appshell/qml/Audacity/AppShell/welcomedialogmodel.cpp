@@ -43,8 +43,8 @@ std::vector<WelcomeDialogModel::Item> WelcomeDialogModel::buildItems()
 {
 #ifdef AU_TRIEFLOW_DISTRIBUTION
     return {{
-        muse::qtrc("appshell/welcome", "WaveQuay · local audio, ready to share"),
-        "qrc:/resources/wavequay.svg",
+        muse::qtrc("appshell/welcome", "WaveWeft · local audio, ready to share"),
+        "qrc:/resources/waveweft.svg",
         {},
         muse::qtrc("appshell/welcome", "Start an audio project"),
         [this]() { dispatcher()->dispatch("file-new"); }

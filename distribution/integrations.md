@@ -1,4 +1,4 @@
-# WaveQuay local distribution
+# WaveWeft local distribution
 
 Status: source implementation, pending Windows build and runtime qualification.
 No package is approved for redistribution by this document.
@@ -13,7 +13,7 @@ python distribution/scan-package.py stage > package-scan.json
 ```
 
 The Windows CMake target stays `audacity`; the distribution output is
-`WaveQuay.exe`. Qt 6.11.2 is the root CI qualification baseline. The source is
+`WaveWeft.exe`. Qt 6.11.2 is the root CI qualification baseline. The source is
 C++17 (the approved plan's C++20 label did not match upstream CMake).
 
 ## Excluded integrations
@@ -24,7 +24,7 @@ service-key options. It forces the corresponding options off. Cloud, network,
 update and extension composition uses the pinned upstream stubs. Local
 crash/log diagnostics remain available; no Crashpad uploader is built.
 
-WaveQuay omits cloud save/publish/sign-in routes and first-run account/usage
+WaveWeft omits cloud save/publish/sign-in routes and first-run account/usage
 pages. It substitutes a local welcome card and independent About attribution.
 The owned app QRC contains no update/learning feeds. The effects-marketplace
 model, action and route are excluded; `au3-musehub` and `au3-network-manager`

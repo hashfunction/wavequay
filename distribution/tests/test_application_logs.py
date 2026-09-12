@@ -23,7 +23,7 @@ class ApplicationLogTests(unittest.TestCase):
         self.output.mkdir(parents=True)
         self.report = self.output / 'gui-observations.json'
         self.observation = dict(userStateBefore=[dict(path=str(self.root), exists=False)])
-        self.log = self.logs / 'WaveQuay_260911_123500.log'
+        self.log = self.logs / 'WaveWeft_260911_123500.log'
 
     def collect(self):
         self.assertTrue(COLLECTOR.is_file(), 'Application log collector is missing')
@@ -52,6 +52,17 @@ class ApplicationLogTests(unittest.TestCase):
         self.assertEqual(entry['truncated'], False)
         self.assertEqual(self.log.read_bytes(), data)
         self.assertEqual(metadata['errors'], [])
+
+    def test_renamed_and_legacy_log_names_stay_within_owned_legacy_profile(self):
+        for name in ('WaveWeft', 'WaveQuay', 'Audacity'):
+            (self.logs / f'{name}_260911_123500.log').write_bytes(name.encode())
+        (self.logs / 'WaveWeftPrivate.log').write_text('not an application log')
+        result, metadata = self.collect()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(metadata['files']), 3)
+        self.assertEqual({(self.output / row['path']).read_bytes() for row in metadata['files']},
+                         {b'WaveWeft', b'WaveQuay', b'Audacity'})
+        self.assertTrue(all(Path(row['sourcePath']).parent == self.logs for row in metadata['files']))
 
     def test_existing_profile_refuses_all_collection(self):
         self.log.write_text('must not capture an existing profile')

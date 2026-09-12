@@ -1,4 +1,4 @@
-# Staged Windows GUI qualification
+# WaveWeft staged Windows GUI qualification
 
 This observer is a qualification tool, not part of the installed application.
 It does not load Qt, use runner Qt tools, write preferences, import media, or
@@ -21,12 +21,12 @@ python distribution/verify_gui_evidence.py `
 The launcher uses the OS's x64 Windows PowerShell 5.1 and .NET Framework UI
 Automation, Forms, Drawing and WindowsBase assemblies. It compiles the C# helper
 with that host's compiler. An outer 180-second watchdog bounds stalled native
-providers; the inner observation budget is 90 seconds. WaveQuay is placed in an
+providers; the inner observation budget is 90 seconds. WaveWeft is placed in an
 owned `KILL_ON_JOB_CLOSE` job before UI operations. The helper closes that job on
 success/failure; timeout also kills only its exact helper process tree. No
 process-name based global kill or preference cleanup is performed.
 
-The target is exactly `stage/bin/WaveQuay.exe`, with no command-line arguments.
+The target is exactly `stage/bin/WaveWeft.exe`, with no command-line arguments.
 Its environment is cleared and rebuilt from an allowlist; PATH contains only
 `stage/bin`, Windows/System32 and Windows. The working directory is stage/bin.
 No inherited Qt/QML/compiler/plugin path, token, or build-tool directory is
@@ -41,9 +41,10 @@ environment directories alone **do not isolate Qt preferences**. This tool
 requires an unused disposable runner profile and fails on existing relevant
 known-folder paths. Current `src/app/main.cpp` still uses `Trieflow` plus
 `Audacity4Development`/`Audacity4` for QCoreApplication settings identity; those
-actual INI/data/Documents paths and prospective WaveQuay names are checked.
-That legacy basename is an outstanding baseline branding/data-directory issue;
-the qualification helper does not change the application or claim to fix it.
+actual INI/data/Documents paths and prospective WaveWeft names are checked.
+Those namespaces intentionally retain existing settings and document locations;
+the renamed executable does not migrate or reset user data. Historical WaveQuay
+roots remain protected alongside prospective WaveWeft roots.
 It never resets, injects, edits, copies into, or deletes settings to bypass
 onboarding. Repeating qualification requires another fresh runner/profile.
 
@@ -65,7 +66,7 @@ this preflight; matching remains exact, without prefix or whitespace tolerance.
 The observer records which expected title it used and the verifier checks it.
 
 Completion requires all three observed pages, genuine PNG captures, and two
-“WaveQuay 4.0” editing-window observations at least three seconds apart. Both must
+“WaveWeft 1.0.1” editing-window observations at least three seconds apart. Both must
 contain the visible enabled Playback toolbar and Add track button. Unexpected
 modal/native/error dialogs and early process exit fail. Screenshots must be of
 the owned foreground window, entirely on the visible desktop, at least 400x300,
@@ -89,7 +90,7 @@ does not override that handler. Empty stdout/stderr therefore does not mean
 there were no startup errors. After the owned helper/process tree stops, the
 outer launcher runs `collect_application_logs.py` on the prelaunch profile
 record and the actual recorded child environment. It copies only timestamped
-WaveQuay/Audacity startup `.log` files under recognized fresh app roots. It does not
+WaveWeft/Audacity startup `.log` files under recognized fresh app roots. It does not
 copy preferences, projects or arbitrary private-environment contents. Reparse
 paths and previously existing profiles are rejected. At most eight log tails
 of 2 MiB each are retained as `application-startup-*.log`; metadata records
@@ -116,6 +117,10 @@ uploaded. The same splash-only result exists in run `34596275560`. This bounded
 collector targeted host known folders; the exact underlying startup failure and
 actual editor qualification still require another native run. The exact title,
 onboarding, module-provenance and process-lifetime requirements remain intact.
+
+## Historical startup observations
+
+Historical run notes retain the exact names and limitations recorded at the time.
 
 Run [34601015591](https://github.com/hashfunction/wavequay/actions/runs/34601015591)
 at public snapshot `14af4e955a1b5b84c266467bb0ff6e6ddf52e02e` reproduced the splash
@@ -153,8 +158,8 @@ dotnet build distribution/windows-gui/GuiProbe.csproj --nologo \
 
 `test_gui_evidence.py` uses explicitly synthetic observations and generated PNG
 fixtures. Passing these is evidence about the fail-closed policy, never evidence
-that WaveQuay displayed a window. The Windows helper self-test is similarly
-reported separately from actual WaveQuay qualification.
+that WaveWeft displayed a window. The Windows helper self-test is similarly
+reported separately from actual WaveWeft qualification.
 
 ## Actual logger diagnostic sink (run 34605794455)
 

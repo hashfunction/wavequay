@@ -108,7 +108,7 @@ def verify(report, inventory, evidence_dir, expected_commit):
     require(isinstance(pid, int) and pid > 0 and report['arguments'] == [], 'Unexpected launch identity/arguments')
     stage, system = windows_path(report['stageRoot']), windows_path(report['systemRoot'])
     executable = windows_path(report['executable'])
-    require(executable == stage / 'bin' / 'WaveQuay.exe', 'Wrong staged executable')
+    require(executable == stage / 'bin' / 'WaveWeft.exe', 'Wrong staged executable')
     env = {k.upper(): v for k, v in report['environment'].items()}
     allowed = {'PATH', 'SYSTEMROOT', 'WINDIR', 'SYSTEMDRIVE', 'COMSPEC', 'USERPROFILE', 'APPDATA',
                'LOCALAPPDATA', 'TEMP', 'TMP', 'LANG', 'CI', 'WAVEQUAY_STARTUP_DIAGNOSTICS', 'QT_FORCE_STDERR_LOGGING', 'QT_DEBUG_PLUGINS'}
@@ -127,7 +127,7 @@ def verify(report, inventory, evidence_dir, expected_commit):
         require(not path.is_absolute() and not path.drive and '..' not in path.parts and path not in locked,
                 'Invalid or duplicate inventory entry')
         locked[path] = entry['sha256'].lower()
-    require(locked[PureWindowsPath('bin/WaveQuay.exe')] == report['executableSha256'].lower(), 'Executable hash changed')
+    require(locked[PureWindowsPath('bin/WaveWeft.exe')] == report['executableSha256'].lower(), 'Executable hash changed')
     loaded = set()
     for module in report['modules']:
         path = windows_path(module['path'])
@@ -139,7 +139,7 @@ def verify(report, inventory, evidence_dir, expected_commit):
         else:
             require(path.is_relative_to(system) and not name.startswith('qt') and name != 'qwindows.dll',
                     'Module resolved outside stage/Windows: ' + str(path))
-    require(QT_MODULES | {'wavequay.exe'} <= loaded, 'Missing staged executable/Qt/platform module evidence')
+    require(QT_MODULES | {'waveweft.exe'} <= loaded, 'Missing staged executable/Qt/platform module evidence')
     events = report['events']
     require(len(events) == 5, 'Require three onboarding pages and two stable main-window observations')
     previous_ms = -1
@@ -188,7 +188,7 @@ def main():
     args = parser.parse_args()
     verify(json.loads(args.report.read_text(encoding='utf-8-sig')),
            json.loads(args.inventory.read_text(encoding='utf-8-sig')), args.report.parent, args.source_commit)
-    print('PASS: staged WaveQuay onboarding and main-window observations verified; audio/export/license gates remain open.')
+    print('PASS: staged WaveWeft onboarding and main-window observations verified; audio/export/license gates remain open.')
 
 
 if __name__ == '__main__':

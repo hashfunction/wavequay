@@ -97,7 +97,7 @@ static class GuiProbe
         try
         {
             var desktop = Make("Desktop", 1, 1);
-            var main = Make("WaveQuay 4.0", 101, 1532);
+            var main = Make("WaveWeft 1.0.1", 101, 1532);
             var popup = Make("Getting started", 202, 1532);
             // The real run's desktop-child list contained only main; its tree
             // contained the owned Getting started Window as a descendant.

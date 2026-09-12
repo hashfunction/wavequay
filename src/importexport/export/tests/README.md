@@ -1,4 +1,4 @@
-# WaveQuay export recipe tests
+# WaveWeft export recipe tests
 
 The standalone CMake project builds two device-free GoogleTest executables:
 

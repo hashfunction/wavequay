@@ -26,14 +26,14 @@ ColumnLayout {
         readonly property int contentTextSpacing: 8
 
         readonly property string versionSubtitle: root.model.isWaveQuayDistribution()
-            ? qsTrc("appshell/about", "WaveQuay by Trieflow. Local audio editing and export recipes, built on Audacity. An independent distribution; not affiliated with or endorsed by the Audacity team.")
+            ? qsTrc("appshell/about", "WaveWeft by Trieflow. Local audio editing and export recipes, built on Audacity. An independent distribution; not affiliated with or endorsed by the Audacity team.")
             : qsTrc("appshell/about", "Audacity the free, open source, cross-platform software for recording and editing sounds.")
     }
 
     Image {
         Layout.fillWidth: true
 
-        source: root.model.isWaveQuayDistribution() ? "qrc:/resources/wavequay.svg" : "qrc:/resources/AboutBanner.png"
+        source: root.model.isWaveQuayDistribution() ? "qrc:/resources/waveweft.svg" : "qrc:/resources/AboutBanner.png"
         Layout.preferredHeight: root.model.isWaveQuayDistribution() ? 120 : implicitHeight
         fillMode: Image.PreserveAspectFit
         sourceSize.width: root.width
@@ -199,7 +199,7 @@ ColumnLayout {
                 StyledTextLabel {
                     text: {
                         let websiteUrl = root.model.appUrl()
-                        return (root.model.isWaveQuayDistribution() ? qsTrc("appshell/about", "WaveQuay website: %1") : qsTrc("appshell/about", "Audacity website: %1")).arg('<a href="' + websiteUrl.url + '">' + websiteUrl.displayName + '</a>')
+                        return (root.model.isWaveQuayDistribution() ? qsTrc("appshell/about", "WaveWeft website: %1") : qsTrc("appshell/about", "Audacity website: %1")).arg('<a href="' + websiteUrl.url + '">' + websiteUrl.displayName + '</a>')
                     }
                     font: ui.theme.bodyFont
                 }

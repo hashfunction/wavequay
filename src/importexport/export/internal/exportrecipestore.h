@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Trieflow
- * WaveQuay export recipes.
+ * WaveWeft export recipes.
  */
 #pragma once
 #include "../iexportrecipestore.h"

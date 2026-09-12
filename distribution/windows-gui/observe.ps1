@@ -22,7 +22,7 @@ try {
     Add-Type -Path @((Join-Path $PSScriptRoot 'GuiProbe.cs'),(Join-Path $PSScriptRoot 'OnboardingInput.cs')) -ReferencedAssemblies $references
     if ($SelfTest) {
         [WaveQuayQualification.GuiProbe]::SelfTest() | Set-Content -Encoding UTF8 (Join-Path $EvidenceDirectory 'gui-helper-self-test.json')
-        Write-Output 'PASS: real Windows job cleanup and UIA interop fixture. This is not WaveQuay GUI qualification.'
+        Write-Output 'PASS: real Windows job cleanup and UIA interop fixture. This is not WaveWeft GUI qualification.'
         exit 0
     }
     if (-not $Stage -or -not $ExpectedMainWindowTitle -or $SourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Expected an exact stage and source commit.' }

@@ -12,7 +12,7 @@
         <file alias="configs/ui.cfg">../src/app/configs/ui.cfg</file>
         <file alias="configs/update.cfg">configs/update.cfg</file>
         <file alias="configs/user_agent.cfg">../src/app/configs/user_agent.cfg</file>
-        <file alias="resources/appIcon.png">branding/wavequay.png</file>
-        <file alias="resources/wavequay.svg">branding/wavequay.svg</file>
+        <file alias="resources/appIcon.png">branding/waveweft.png</file>
+        <file alias="resources/waveweft.svg">branding/waveweft.svg</file>
     </qresource>
 </RCC>

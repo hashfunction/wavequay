@@ -47,6 +47,16 @@ private:
     }
 };
 
+inline QAccessibleInterface* applicationWindowAccessibleFactory(const QString& className, QObject* object)
+{
+    // Qt Templates registers its own QQuickApplicationWindow getter after Muse.
+    // Resolve the actual derived QML class first, without generated type numbers.
+    if (!object || !object->inherits("QQuickApplicationWindow")
+        || className != QLatin1String(object->metaObject()->className())
+        || className == QLatin1String("QQuickApplicationWindow")) return nullptr;
+    return new DialogAccessibleWindow(object);
+}
+
 inline void registerDialogAccessibility(muse::accessibility::IQAccessibleInterfaceRegister& registry)
 {
     // WindowView creates QQuickView popups. Register that concrete class so
@@ -56,6 +66,7 @@ inline void registerDialogAccessibility(muse::accessibility::IQAccessibleInterfa
         registry.registerInterfaceGetter("QQuickView", [](QObject* window) -> QAccessibleInterface* {
             return new DialogAccessibleWindow(window);
         });
+        QAccessible::installFactory(applicationWindowAccessibleFactory);
     }
 }
 }

@@ -16,11 +16,15 @@ include(GetPlatformInfo)
 if (OS_IS_WIN)
     set(APP_OUTPUT_NAME ${MUSE_APP_NAME}${MUSE_APP_VERSION_MAJOR})
     if(AU_TRIEFLOW_DISTRIBUTION)
-        set(APP_OUTPUT_NAME WaveQuay)
+        set(APP_OUTPUT_NAME WaveWeft)
     endif()
 
     include(GetCompilerInfo)
     
+    set(WINDOWS_VERSION_COMPANY "MuseCY Holdings Ltd")
+    if(AU_TRIEFLOW_DISTRIBUTION)
+        set(WINDOWS_VERSION_COMPANY "Trieflow")
+    endif()
     set(WINDOWS_VERSION_RC ${PROJECT_BINARY_DIR}/windows_version.rc)
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/windows_version.rc.in
@@ -31,7 +35,7 @@ if (OS_IS_WIN)
         # MSVC recognizes a *.rc file and will invoke the resource compiler to link it
         set(WINDOWS_ICONS_RC ${PROJECT_SOURCE_DIR}/share/icons/windows_icons.rc)
         if(AU_TRIEFLOW_DISTRIBUTION)
-            set(WINDOWS_ICONS_RC ${PROJECT_BINARY_DIR}/wavequay_icons.rc)
+            set(WINDOWS_ICONS_RC ${PROJECT_BINARY_DIR}/waveweft_icons.rc)
             configure_file(${PROJECT_SOURCE_DIR}/distribution/branding/windows_icons.rc.in ${WINDOWS_ICONS_RC} @ONLY)
         endif()
     elseif(CC_IS_MINGW)

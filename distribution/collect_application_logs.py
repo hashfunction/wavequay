@@ -15,9 +15,9 @@ from pathlib import Path
 import re
 import stat
 
-APP_NAMES = {'Audacity4', 'Audacity4Development', 'WaveQuay', 'WaveQuay4', 'WaveQuay 4'}
+APP_NAMES = {'Audacity4', 'Audacity4Development', 'WaveQuay', 'WaveQuay4', 'WaveQuay 4', 'WaveWeft', 'WaveWeft1', 'WaveWeft 1'}
 ORGANIZATIONS = {'Trieflow', 'Trieflow LLC'}
-LOG_NAME = re.compile(r'(?:WaveQuay|Audacity)_\d{6}_\d{6}\.log\Z')
+LOG_NAME = re.compile(r'(?:WaveWeft|WaveQuay|Audacity)_\d{6}_\d{6}\.log\Z')
 MAX_LOG_BYTES = 2 * 1024 * 1024
 MAX_LOGS = 8
 

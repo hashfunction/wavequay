@@ -46,11 +46,11 @@ static const Settings::Key STARTUP_MODE_TYPE(module_name, "application/startup/m
 static const Settings::Key STARTUP_SCORE_PATH(module_name, "application/startup/startScore");
 
 #ifdef AU_TRIEFLOW_DISTRIBUTION
-static const std::string AUDACITY_URL("https://wavequay.trieflow.com/");
-static const std::string AUDACITY_MANUAL_URL("https://wavequay.trieflow.com/support");
-static const std::string AUDACITY_SUPPORT_URL("https://wavequay.trieflow.com/support");
-static const std::string AUDACITY_FORUM_URL("https://wavequay.trieflow.com/support");
-static const std::string AUDACITY_CONTRIBUTE_URL("https://wavequay.trieflow.com/source");
+static const std::string AUDACITY_URL("https://waveweft.trieflow.com/");
+static const std::string AUDACITY_MANUAL_URL("https://waveweft.trieflow.com/support");
+static const std::string AUDACITY_SUPPORT_URL("https://waveweft.trieflow.com/support");
+static const std::string AUDACITY_FORUM_URL("https://waveweft.trieflow.com/support");
+static const std::string AUDACITY_CONTRIBUTE_URL("https://waveweft.trieflow.com/source");
 #else
 static const std::string AUDACITY_URL("https://www.audacityteam.org/");
 static const std::string AUDACITY_MANUAL_URL("https://manual.audacityteam.org/");

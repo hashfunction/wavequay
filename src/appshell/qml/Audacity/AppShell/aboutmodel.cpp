@@ -309,7 +309,7 @@ QVariantMap AboutModel::contributionUrl() const
 QVariantMap AboutModel::privacyPolicyUrl() const
 {
 #ifdef AU_TRIEFLOW_DISTRIBUTION
-    QUrl url("https://wavequay.trieflow.com/privacy");
+    QUrl url("https://waveweft.trieflow.com/privacy");
 #else
     QUrl url(QString::fromStdString(updateConfiguration()->privacyPolicyUrl()));
 #endif

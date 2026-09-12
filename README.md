@@ -1,3 +1,28 @@
+# WaveWeft
+
+WaveWeft 1.0.1 is Trieflow's independent local audio editor with reusable export
+recipes, built on Audacity. It is not affiliated with or endorsed by the
+Audacity team.
+
+[Product](https://waveweft.trieflow.com) · [Support](https://waveweft.trieflow.com/support)
+· [Privacy](https://waveweft.trieflow.com/privacy) · [Source](https://waveweft.trieflow.com/source)
+
+See [distribution build instructions](distribution/integrations.md) and the
+[Windows qualification matrix](distribution/windows-test-matrix.md). The Windows
+executable is `WaveWeft.exe`, with version `1.0.1.0`. A fresh Windows build and
+editor observation are required for this renamed source; historical screenshots
+and reports retain their observed names. Audio/export, licensing and Store
+qualification remain separate pending gates.
+
+Existing settings and documents keep their compatibility namespaces. Parent-owned
+Store packaging must retain Identity `1659hashfunction.WaveQuay` and ApplicationId
+`WaveQuay`; this source repository does not contain an MSIX packager.
+
+## Upstream project and licensing
+
+The original upstream README is retained below. Product branding does not change
+its authorship, licenses, dependency pins or project formats.
+
 # Audacity
 
 [![Coverage](https://s3.us-east-1.amazonaws.com/extensions.musescore.org/test/code_coverage/au_coverage_badge.svg)](https://github.com/audacity/audacity/actions/workflows/au4_check_unit_tests.yml)

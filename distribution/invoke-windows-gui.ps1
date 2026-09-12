@@ -45,7 +45,7 @@ try {
     while (-not $child.WaitForExit(1000)) {
         if ($clock.Elapsed.TotalSeconds -ge 180) {
             $timedOut = $true
-            # The helper owns a KILL_ON_JOB_CLOSE job for WaveQuay. Also terminate
+            # The helper owns a KILL_ON_JOB_CLOSE job for WaveWeft. Also terminate
             # the exact helper process tree, including an assignment-failure race.
             $child.Kill($true)
             $child.WaitForExit()

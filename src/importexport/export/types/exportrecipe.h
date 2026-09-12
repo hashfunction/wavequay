@@ -1,4 +1,4 @@
-/* WaveQuay additions, GPL-3.0-or-later. */
+/* WaveWeft additions, GPL-3.0-or-later. */
 #pragma once
 #include "exporttypes.h"
 #include <QString>

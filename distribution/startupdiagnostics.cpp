@@ -13,8 +13,8 @@
 namespace wavequay {
 namespace {
 using namespace kors::logger;
-constexpr const char* SinkName = "WaveQuayStartupStderr";
-constexpr std::string_view LimitMessage = "[WaveQuay startup] diagnostic byte limit reached\n";
+constexpr const char* SinkName = "WaveWeftStartupStderr";
+constexpr std::string_view LimitMessage = "[WaveWeft startup] diagnostic byte limit reached\n";
 
 bool writeRedirectedStderr(std::string_view text)
 {
@@ -48,7 +48,7 @@ public:
     std::string name() const override { return SinkName; }
     bool begin(const std::string& directory) noexcept
     {
-        try { return writeBounded("[WaveQuay startup] configured-log-directory: " + directory.substr(0, 4096) + "\n"); }
+        try { return writeBounded("[WaveWeft startup] configured-log-directory: " + directory.substr(0, 4096) + "\n"); }
         catch (...) { m_disabled = true; return false; }
     }
     void write(const LogMsg& message) override
@@ -57,7 +57,7 @@ public:
         // The source guard limits this sink to a fresh, no-media CI launch.
         if (message.type != Logger::ERRR && message.type != Logger::WARN) return;
         try {
-            std::string value = "[WaveQuay startup] " + std::string(message.type) + " | "
+            std::string value = "[WaveWeft startup] " + std::string(message.type) + " | "
                 + std::string(message.tag.substr(0, 128)) + " | " + message.message.substr(0, 8192);
             if (message.message.size() > 8192) value += " [message truncated]";
             writeBounded(value + "\n");

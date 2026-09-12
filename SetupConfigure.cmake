@@ -67,6 +67,9 @@ endif()
 
 # Display version number and the release channel (unless it is a release) as the app title
 set(MUSE_APP_TITLE_VERSION "${MUSE_APP_TITLE} ${MUSE_APP_VERSION_MAJOR}.${MUSE_APP_VERSION_MINOR}")
+if(AU_TRIEFLOW_DISTRIBUTION)
+    set(MUSE_APP_TITLE_VERSION "${MUSE_APP_TITLE} ${MUSE_APP_VERSION}")
+endif()
 
 if(NOT MUSE_APP_VERSION_LABEL STREQUAL "")
     string(APPEND MUSE_APP_TITLE_VERSION " ${MUSE_APP_VERSION_LABEL}")

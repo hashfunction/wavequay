@@ -174,8 +174,24 @@ int main(int argc, char** argv)
     QAccessible::installFactory(stockQuickFactory);
     QQmlEngine engine;
     qInfo() << "Onboarding probe: QML engine constructed";
-    QQuickView mainWindow(&engine, nullptr);
+    QQmlComponent mainComponent(&engine);
+    std::unique_ptr<QQuickWindow> mainOwner;
+    if (app.arguments().contains("--application-window")) {
+        // AppWindow.qml's real Qt base, instead of the QQuickView popup class.
+        mainComponent.setData("import QtQuick.Controls\nApplicationWindow { width: 800; height: 600 }", QUrl());
+        mainOwner.reset(qobject_cast<QQuickWindow*>(mainComponent.create()));
+        if (!mainOwner) qCritical() << mainComponent.errors();
+        require(mainOwner != nullptr && mainOwner->inherits("QQuickApplicationWindow"), "real Qt ApplicationWindow main must load");
+        require(QByteArray(mainOwner->metaObject()->className()) != "QQuickApplicationWindow", "QML must supply its actual derived metaobject");
+    } else {
+        mainOwner = std::make_unique<QQuickView>(&engine, nullptr);
+    }
+    QQuickWindow& mainWindow = *mainOwner;
     QQuickView popup(&engine, nullptr);
+    require(!au::appshell::applicationWindowAccessibleFactory("QQuickApplicationWindow", nullptr)
+            && !au::appshell::applicationWindowAccessibleFactory("QQuickView", &popup)
+            && !au::appshell::applicationWindowAccessibleFactory("foreign", &mainWindow),
+            "main-window factory must reject null, popup and unrelated class requests");
     if (app.arguments().contains("--muse-factory-last")) {
         QAccessible::removeFactory(factory); QAccessible::installFactory(factory);
     }
@@ -262,10 +278,14 @@ int main(int argc, char** argv)
                 "popup children must preserve parent/indexOfChild round trips used by Windows UIA sibling navigation");
     }
     auto mainInterface = QAccessible::queryAccessibleInterface(&mainWindow);
+    require(dynamic_cast<AccessibleWindowInterface*>(mainInterface), "main window must use Muse provider instead of stock Qt Quick provider");
     auto mainItemInterface = named(mainInterface, "List");
     require(mainItemInterface && !named(windowInterface, "List"), "main controls remain in their own window only");
     require(windowInterface->indexOfChild(mainItemInterface) == -1 && !windowInterface->child(-1)
             && !windowInterface->child(windowInterface->childCount()), "foreign children and out-of-range child indexes are rejected");
+    require(namedBySibling(mainInterface, "Main editor focus") && mainInterface->focusChild(),
+            "main editor controls and focus must remain reachable by Windows UIA sibling traversal");
+    if (app.arguments().contains("--application-window")) qInfo() << "ApplicationWindow Muse provider and editor traversal passed";
     qInfo() << "Muse QQuickView provider selected; Qt" << qVersion();
     auto model = qmlObject(dialog, "model");
     auto next = qobject_cast<QQuickItem*>(qmlObject(dialog, "nextStepButton"));
@@ -319,6 +339,12 @@ int main(int argc, char** argv)
     require(completionWrites == 1, "completion is committed exactly once");
     require(testing::Mock::VerifyAndClearExpectations(configuration.get()), "configuration completion contract");
     delete dialog;
+    popup.hide();
+    process();
+    mainInterface = QAccessible::queryAccessibleInterface(&mainWindow);
+    require(dynamic_cast<AccessibleWindowInterface*>(mainInterface)
+            && namedBySibling(mainInterface, "Main editor focus") && mainInterface->focusChild(),
+            "main editor provider and sibling/focus routes survive onboarding destruction");
     mainFocus.reset();
     mainPanel.reset();
     qInfo() << "Onboarding probe: dialog destroyed";

@@ -32,7 +32,7 @@ class DistributionConfigurationTests(unittest.TestCase):
             with self.subTest(option=option):
                 result = self.configure(f"-D{option}=ON")
                 self.assertNotEqual(result.returncode, 0)
-                self.assertIn(f"WaveQuay forbids {option}", result.stderr)
+                self.assertIn(f"WaveWeft forbids {option}", result.stderr)
 
     def test_portaudio_owned_recipe_explicitly_disables_asio(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Trieflow
- * WaveQuay export recipes.
+ * WaveWeft export recipes.
  */
 #include "exportrecipe.h"
 #include <QUuid>
@@ -37,7 +37,7 @@ bool ExportRecipe::operator==(const ExportRecipe& r) const
 RecipeStatus au::importexport::validateRecipe(const ExportRecipe& r)
 {
     if (r.schemaVersion != 1)
-        return invalid("Unsupported recipe schema; recreate this recipe with this version of WaveQuay.");
+        return invalid("Unsupported recipe schema; recreate this recipe with this version of WaveWeft.");
     if (QUuid(r.id).isNull() || QUuid(r.id).toString(QUuid::WithoutBraces) != r.id)
         return invalid("Recipe ID is not a canonical UUID.");
     if (r.name.trimmed().isEmpty() || r.name.size() > 128 || r.name.contains(QChar::Null))

@@ -63,6 +63,8 @@ class OnboardingAccessibilityTests(unittest.TestCase):
         self.assertNotIn("TypeError", output)
         self.assertNotIn("ReferenceError", output)
         self.assertNotIn("Cannot find font directory", output)
+        if "--application-window" in arguments:
+            self.assertIn("ApplicationWindow Muse provider and editor traversal passed", output)
 
     def test_missing_or_invalid_fixture_font_fails_before_qml(self):
         original = self.font.read_bytes()
@@ -85,6 +87,12 @@ class OnboardingAccessibilityTests(unittest.TestCase):
 
     def test_dialog_provider_and_actions_when_muse_factory_is_last(self):
         self.run_probe("--muse-factory-last")
+
+    def test_application_window_provider_when_qt_factory_is_last(self):
+        self.run_probe("--application-window")
+
+    def test_application_window_provider_when_muse_factory_is_last(self):
+        self.run_probe("--application-window", "--muse-factory-last")
 
 
 if __name__ == "__main__":

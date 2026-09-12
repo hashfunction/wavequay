@@ -93,7 +93,7 @@ if(NOT AU_TRIEFLOW_DISTRIBUTION)
     )
 else()
     # Preserve the resource name used by the startup screen with our own art.
-    set(WAVEQUAY_LOADING_ART "${PROJECT_SOURCE_DIR}/distribution/branding/wavequay.svg")
+    set(WAVEQUAY_LOADING_ART "${PROJECT_SOURCE_DIR}/distribution/branding/waveweft.svg")
     set_source_files_properties(${WAVEQUAY_LOADING_ART} PROPERTIES QT_RESOURCE_ALIAS "resources/LoadingScreen.svg")
     list(APPEND APPSHELL_COMMON_RESOURCES ${WAVEQUAY_LOADING_ART})
 endif()

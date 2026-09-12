@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: GPL-3.0-only
  * Copyright (C) 2026 Trieflow
- * WaveQuay export recipes.
+ * WaveWeft export recipes.
  */
 #include "exportrecipestore.h"
 #include <QCryptographicHash>
@@ -204,7 +204,7 @@ RecipeResult<std::vector<ExportRecipe>> ExportRecipeStore::recipes()
         return { status, { } };
     QLockFile lock(m_path + ".lock");
     if (!lock.tryLock(100))
-        return { { RecipeError::Busy, "Another WaveQuay window is updating recipes. Try again.", { } }, { } };
+        return { { RecipeError::Busy, "Another WaveWeft window is updating recipes. Try again.", { } }, { } };
     return read();
 }
 RecipeResult<ExportRecipe> ExportRecipeStore::recipe(const QString& id)

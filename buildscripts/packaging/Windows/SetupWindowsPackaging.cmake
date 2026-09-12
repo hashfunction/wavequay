@@ -11,11 +11,20 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Audacity is a digital audio editor")
 set(CPACK_PACKAGE_VENDOR "Audacity")
 set(CPACK_PACKAGE_CONTACT "https://audacityteam.org")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://audacityteam.org")
+if(AU_TRIEFLOW_DISTRIBUTION)
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "WaveWeft is a local audio editor with reusable export recipes")
+    set(CPACK_PACKAGE_VENDOR "Trieflow")
+    set(CPACK_PACKAGE_CONTACT "https://waveweft.trieflow.com/support")
+    set(CPACK_PACKAGE_HOMEPAGE_URL "https://waveweft.trieflow.com")
+endif()
 
 set(CPACK_PACKAGE_VERSION_MAJOR "${MUSE_APP_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${MUSE_APP_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${MUSE_APP_VERSION_PATCH}")
 set(CPACK_PACKAGE_VERSION_BUILD "${CMAKE_BUILD_NUMBER}")
+if(AU_TRIEFLOW_DISTRIBUTION)
+    set(CPACK_PACKAGE_VERSION_BUILD "0")
+endif()
 set(CPACK_PACKAGE_VERSION "${MUSE_APP_VERSION_MAJOR}.${MUSE_APP_VERSION_MINOR}.${MUSE_APP_VERSION_PATCH}.${CPACK_PACKAGE_VERSION_BUILD}")
 message("CPACK_PACKAGE_VERSION: ${CPACK_PACKAGE_VERSION}")
 
@@ -42,6 +51,9 @@ set(CPACK_PACKAGE_FILE_NAME "${MUSE_APP_NAME}-${MUSE_APP_VERSION}${git_date_stri
 set(CPACK_PACKAGE_INSTALL_DIRECTORY ${MUSE_APP_NAME_VERSION})
 
 set(MUSE_EXECUTABLE_NAME ${MUSE_APP_NAME}${MUSE_APP_VERSION_MAJOR})
+if(AU_TRIEFLOW_DISTRIBUTION)
+    set(MUSE_EXECUTABLE_NAME WaveWeft)
+endif()
 
 # Wix-specific options
 set(CPACK_GENERATOR "WIX")
@@ -66,6 +78,9 @@ message(STATUS "[SetupWindowsPackaging.cmake] CPACK_WIX_UPGRADE_GUID: ${CPACK_WI
 
 set(CPACK_WIX_LICENSE_RTF "${PROJECT_SOURCE_DIR}/buildscripts/packaging/Windows/Installer/LICENSE.rtf")
 set(CPACK_WIX_PRODUCT_ICON "${PROJECT_SOURCE_DIR}/share/icons/AppIcon/AU4_AppIcon.ico")
+if(AU_TRIEFLOW_DISTRIBUTION)
+    set(CPACK_WIX_PRODUCT_ICON "${PROJECT_SOURCE_DIR}/distribution/branding/waveweft.ico")
+endif()
 set(CPACK_WIX_UI_BANNER "${PROJECT_SOURCE_DIR}/buildscripts/packaging/Windows/Installer/installer_banner_wix.png")
 set(CPACK_WIX_UI_DIALOG "${PROJECT_SOURCE_DIR}/buildscripts/packaging/Windows/Installer/installer_background_wix.png")
 set(CPACK_WIX_PROGRAM_MENU_FOLDER "${MUSE_APP_TITLE_VERSION}")

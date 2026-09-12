@@ -11,12 +11,12 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName",      "MuseCY Holdings Ltd"
+            VALUE "CompanyName",      "@WINDOWS_VERSION_COMPANY@"
             VALUE "FileDescription",  "@MUSE_APP_TITLE_VERSION@"
             VALUE "FileVersion",      "@MUSE_APP_VERSION@"
-            VALUE "InternalName",     "@MUSE_APP_NAME@@MUSE_APP_VERSION_MAJOR@"
+            VALUE "InternalName",     "@APP_OUTPUT_NAME@"
             VALUE "LegalCopyright",   "Copyright (C) 1999-2026 Audacity and others. Published under the GNU General Public License version 3."
-            VALUE "OriginalFilename", "@MUSE_APP_NAME@@MUSE_APP_VERSION_MAJOR@.exe"
+            VALUE "OriginalFilename", "@APP_OUTPUT_NAME@.exe"
             VALUE "ProductName",      "@MUSE_APP_TITLE_VERSION@"
             VALUE "ProductVersion",   "@MUSE_APP_VERSION@"
         END
