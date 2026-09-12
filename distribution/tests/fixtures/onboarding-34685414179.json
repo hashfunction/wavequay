@@ -1,0 +1,456 @@
+{
+  "run_id": 34685414179,
+  "source_commit": "cea8c989103f0f7ab61a2e859b2ba42db0b70379",
+  "source_report_sha256": "50e8a29f025aafe2a6c8b118c0d123e76e56cebbbac792058844f1097c2d7d4d",
+  "note": "Exact captured onboarding events, with each tree reduced to its native window, native action Button and page-reading Button. Tests use their labelled synthetic PNG fixture; full native pixels are replayed separately.",
+  "events": [
+    {
+      "kind": "onboarding",
+      "title": "Getting started",
+      "page": "Select a theme",
+      "button": "Next",
+      "processId": 6076,
+      "elapsedMs": 6551,
+      "screenshot": {
+        "path": "onboarding-1.png",
+        "sha256": "e43d735a2226c708c7010ad9ee79b2af780b8bdf8067ded64a4556075bf26a11",
+        "width": 560,
+        "height": 442,
+        "sampledColors": 188
+      },
+      "inputBefore": {
+        "name": "Next",
+        "controlType": "Button",
+        "windowTitle": "Getting started",
+        "enabled": true,
+        "offscreen": false,
+        "processId": 6076,
+        "matchingButtons": 1,
+        "nativeWindowProcessId": 6076,
+        "foregroundProcessId": 6076,
+        "hitProcessId": 6076,
+        "windowHandle": 131678,
+        "foregroundHandle": 131678,
+        "hitRootHandle": 131678,
+        "buttonBounds": [
+          1096,
+          703,
+          132,
+          28
+        ],
+        "windowBounds": [
+          680,
+          299,
+          560,
+          442
+        ],
+        "desktopBounds": [
+          0,
+          0,
+          1920,
+          1080
+        ],
+        "point": [
+          1162,
+          717
+        ]
+      },
+      "inputFinal": {
+        "name": "Next",
+        "controlType": "Button",
+        "windowTitle": "Getting started",
+        "enabled": true,
+        "offscreen": false,
+        "processId": 6076,
+        "matchingButtons": 1,
+        "nativeWindowProcessId": 6076,
+        "foregroundProcessId": 6076,
+        "hitProcessId": 6076,
+        "windowHandle": 131678,
+        "foregroundHandle": 131678,
+        "hitRootHandle": 131678,
+        "buttonBounds": [
+          1096,
+          703,
+          132,
+          28
+        ],
+        "windowBounds": [
+          680,
+          299,
+          560,
+          442
+        ],
+        "desktopBounds": [
+          0,
+          0,
+          1920,
+          1080
+        ],
+        "point": [
+          1162,
+          717
+        ]
+      },
+      "cursorPosition": [
+        1162,
+        717
+      ],
+      "sentInputs": 2,
+      "interaction": "owned-native-button-click",
+      "tree": [
+        {
+          "name": "Getting started",
+          "automationId": "Getting started",
+          "controlType": "Window",
+          "className": "QQuickView",
+          "processId": 6076,
+          "enabled": true,
+          "nativeWindowHandle": 131678,
+          "offscreen": false,
+          "invoke": false,
+          "bounds": [
+            680,
+            299,
+            560,
+            442
+          ]
+        },
+        {
+          "name": "Next",
+          "automationId": "muse::accessibility::AccessibleAppRootObject.FirstLaunchSetupDialog_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+          "controlType": "Button",
+          "className": "muse::accessibility::AccessibleObject",
+          "processId": 6076,
+          "enabled": true,
+          "nativeWindowHandle": 0,
+          "offscreen": false,
+          "invoke": false,
+          "bounds": [
+            1096,
+            703,
+            132,
+            28
+          ]
+        },
+        {
+          "name": "Select a theme. Next",
+          "automationId": "muse::accessibility::AccessibleAppRootObject.FirstLaunchSetupDialog_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+          "controlType": "Button",
+          "className": "muse::accessibility::AccessibleObject",
+          "processId": 6076,
+          "enabled": true,
+          "nativeWindowHandle": 0,
+          "offscreen": false,
+          "invoke": false,
+          "bounds": [
+            680,
+            327,
+            560,
+            366
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "onboarding",
+      "title": "Getting started",
+      "page": "Clip visualization",
+      "button": "Next",
+      "processId": 6076,
+      "elapsedMs": 8938,
+      "screenshot": {
+        "path": "onboarding-2.png",
+        "sha256": "2d473adb425e1e6bac0a208f4f800653aaef2f62be488faed90bd293b5e09c07",
+        "width": 560,
+        "height": 442,
+        "sampledColors": 242
+      },
+      "inputBefore": {
+        "name": "Next",
+        "controlType": "Button",
+        "windowTitle": "Getting started",
+        "enabled": true,
+        "offscreen": false,
+        "processId": 6076,
+        "matchingButtons": 1,
+        "nativeWindowProcessId": 6076,
+        "foregroundProcessId": 6076,
+        "hitProcessId": 6076,
+        "windowHandle": 131678,
+        "foregroundHandle": 131678,
+        "hitRootHandle": 131678,
+        "buttonBounds": [
+          1096,
+          703,
+          132,
+          28
+        ],
+        "windowBounds": [
+          680,
+          299,
+          560,
+          442
+        ],
+        "desktopBounds": [
+          0,
+          0,
+          1920,
+          1080
+        ],
+        "point": [
+          1162,
+          717
+        ]
+      },
+      "inputFinal": {
+        "name": "Next",
+        "controlType": "Button",
+        "windowTitle": "Getting started",
+        "enabled": true,
+        "offscreen": false,
+        "processId": 6076,
+        "matchingButtons": 1,
+        "nativeWindowProcessId": 6076,
+        "foregroundProcessId": 6076,
+        "hitProcessId": 6076,
+        "windowHandle": 131678,
+        "foregroundHandle": 131678,
+        "hitRootHandle": 131678,
+        "buttonBounds": [
+          1096,
+          703,
+          132,
+          28
+        ],
+        "windowBounds": [
+          680,
+          299,
+          560,
+          442
+        ],
+        "desktopBounds": [
+          0,
+          0,
+          1920,
+          1080
+        ],
+        "point": [
+          1162,
+          717
+        ]
+      },
+      "cursorPosition": [
+        1162,
+        717
+      ],
+      "sentInputs": 2,
+      "interaction": "owned-native-button-click",
+      "tree": [
+        {
+          "name": "Getting started",
+          "automationId": "Getting started",
+          "controlType": "Window",
+          "className": "QQuickView",
+          "processId": 6076,
+          "enabled": true,
+          "nativeWindowHandle": 131678,
+          "offscreen": false,
+          "invoke": false,
+          "bounds": [
+            680,
+            299,
+            560,
+            442
+          ]
+        },
+        {
+          "name": "Next",
+          "automationId": "muse::accessibility::AccessibleAppRootObject.FirstLaunchSetupDialog_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+          "controlType": "Button",
+          "className": "muse::accessibility::AccessibleObject",
+          "processId": 6076,
+          "enabled": true,
+          "nativeWindowHandle": 0,
+          "offscreen": false,
+          "invoke": false,
+          "bounds": [
+            1096,
+            703,
+            132,
+            28
+          ]
+        },
+        {
+          "name": "Clip visualization options panel, Clip visualization. Next",
+          "automationId": "muse::accessibility::AccessibleAppRootObject.FirstLaunchSetupDialog_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+          "controlType": "Button",
+          "className": "muse::accessibility::AccessibleObject",
+          "processId": 6076,
+          "enabled": true,
+          "nativeWindowHandle": 0,
+          "offscreen": false,
+          "invoke": false,
+          "bounds": [
+            680,
+            327,
+            560,
+            366
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "onboarding",
+      "title": "Getting started",
+      "page": "What UI layout (workspace) do you want?",
+      "button": "Accept & continue",
+      "processId": 6076,
+      "elapsedMs": 11173,
+      "screenshot": {
+        "path": "onboarding-3.png",
+        "sha256": "53424fdb87027852216f7c501a496cb851f4d4d7e76d817ed9b7cbbc026d0a79",
+        "width": 560,
+        "height": 442,
+        "sampledColors": 317
+      },
+      "inputBefore": {
+        "name": "Accept & continue",
+        "controlType": "Button",
+        "windowTitle": "Getting started",
+        "enabled": true,
+        "offscreen": false,
+        "processId": 6076,
+        "matchingButtons": 1,
+        "nativeWindowProcessId": 6076,
+        "foregroundProcessId": 6076,
+        "hitProcessId": 6076,
+        "windowHandle": 131678,
+        "foregroundHandle": 131678,
+        "hitRootHandle": 131678,
+        "buttonBounds": [
+          1096,
+          703,
+          132,
+          28
+        ],
+        "windowBounds": [
+          680,
+          299,
+          560,
+          442
+        ],
+        "desktopBounds": [
+          0,
+          0,
+          1920,
+          1080
+        ],
+        "point": [
+          1162,
+          717
+        ]
+      },
+      "inputFinal": {
+        "name": "Accept & continue",
+        "controlType": "Button",
+        "windowTitle": "Getting started",
+        "enabled": true,
+        "offscreen": false,
+        "processId": 6076,
+        "matchingButtons": 1,
+        "nativeWindowProcessId": 6076,
+        "foregroundProcessId": 6076,
+        "hitProcessId": 6076,
+        "windowHandle": 131678,
+        "foregroundHandle": 131678,
+        "hitRootHandle": 131678,
+        "buttonBounds": [
+          1096,
+          703,
+          132,
+          28
+        ],
+        "windowBounds": [
+          680,
+          299,
+          560,
+          442
+        ],
+        "desktopBounds": [
+          0,
+          0,
+          1920,
+          1080
+        ],
+        "point": [
+          1162,
+          717
+        ]
+      },
+      "cursorPosition": [
+        1162,
+        717
+      ],
+      "sentInputs": 2,
+      "interaction": "owned-native-button-click",
+      "tree": [
+        {
+          "name": "Getting started",
+          "automationId": "Getting started",
+          "controlType": "Window",
+          "className": "QQuickView",
+          "processId": 6076,
+          "enabled": true,
+          "nativeWindowHandle": 131678,
+          "offscreen": false,
+          "invoke": false,
+          "bounds": [
+            680,
+            299,
+            560,
+            442
+          ]
+        },
+        {
+          "name": "Accept & continue",
+          "automationId": "muse::accessibility::AccessibleAppRootObject.FirstLaunchSetupDialog_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+          "controlType": "Button",
+          "className": "muse::accessibility::AccessibleObject",
+          "processId": 6076,
+          "enabled": true,
+          "nativeWindowHandle": 0,
+          "offscreen": false,
+          "invoke": false,
+          "bounds": [
+            1096,
+            703,
+            132,
+            28
+          ]
+        },
+        {
+          "name": "Workspace layout options panel, What UI layout (workspace) do you want?. Accept & continue",
+          "automationId": "muse::accessibility::AccessibleAppRootObject.FirstLaunchSetupDialog_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+          "controlType": "Button",
+          "className": "muse::accessibility::AccessibleObject",
+          "processId": 6076,
+          "enabled": true,
+          "nativeWindowHandle": 0,
+          "offscreen": false,
+          "invoke": false,
+          "bounds": [
+            680,
+            327,
+            560,
+            366
+          ]
+        }
+      ]
+    }
+  ],
+  "main_elapsed_ms": [
+    12298,
+    55271
+  ]
+}

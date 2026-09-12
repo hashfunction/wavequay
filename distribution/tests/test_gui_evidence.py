@@ -123,6 +123,85 @@ class GuiEvidenceTests(unittest.TestCase):
                 event['tree'] = [self.node('Playback toolbar', 'Text'), self.node('Add track', 'Text'), button]
                 self.reject()
 
+    def install_captured_onboarding(self):
+        path = Path(__file__).parent / 'fixtures/onboarding-34685414179.json'
+        captured = json.loads(path.read_text(encoding='utf-8'))
+        self.assertEqual(captured['run_id'], 34685414179)
+        self.assertEqual(captured['source_report_sha256'], '50e8a29f025aafe2a6c8b118c0d123e76e56cebbbac792058844f1097c2d7d4d')
+        pid = captured['events'][0]['processId']
+        self.report['processId'] = pid
+        self.report['events'][:3] = copy.deepcopy(captured['events'])
+        # Actual tree/input metadata in the synthetic policy harness; these
+        # fixture pixels are never evidence of a real Windows capture.
+        for event in self.report['events'][:3]:
+            event['screenshot'] = copy.deepcopy(self.screenshot)
+        for event, elapsed in zip(self.report['events'][3:], captured['main_elapsed_ms']):
+            event['processId'] = pid
+            event['elapsedMs'] = elapsed
+            for node in event['tree']:
+                node['processId'] = pid
+
+    def test_actual_contextual_onboarding_page_and_native_input_replay(self):
+        self.install_captured_onboarding()
+        self.verify()
+
+    def test_contextual_onboarding_keeps_exact_page_role_owner_and_visibility(self):
+        self.install_captured_onboarding()
+        original = copy.deepcopy(self.report)
+        for index in (1, 2):
+            event = original['events'][index]
+            label = next(n['name'] for n in event['tree'] if ' panel, ' in n['name'])
+            wrong_page = original['events'][3-index]['page']
+            for key, value in (('controlType', 'Text'), ('controlType', 'Pane'), ('processId', 999),
+                               ('enabled', False), ('offscreen', True), ('name', label + ' '),
+                               ('name', 'Other panel, ' + event['page'] + '. ' + event['button']),
+                               ('name', label.replace(event['page'] + '. ', wrong_page + '. ')),
+                               ('name', label.replace('. ' + event['button'], '. Cancel')),
+                               ('name', 'prefix ' + label)):
+                with self.subTest(page=index, key=key, value=value):
+                    self.report = copy.deepcopy(original)
+                    node = next(n for n in self.report['events'][index]['tree'] if n['name'] == label)
+                    node[key] = value
+                    self.reject()
+
+    def test_contextual_page_reading_node_does_not_replace_native_action_button(self):
+        self.install_captured_onboarding()
+        original = copy.deepcopy(self.report)
+        for index in (1, 2):
+            self.report = copy.deepcopy(original)
+            event = self.report['events'][index]
+            label = next(n['name'] for n in event['tree'] if ' panel, ' in n['name'])
+            event['inputBefore']['name'] = label
+            event['inputFinal']['name'] = label
+            self.reject()
+
+    def test_captured_contextual_pages_keep_the_other_report_gates(self):
+        self.install_captured_onboarding()
+        self.verify()
+        original = copy.deepcopy(self.report)
+        mutations = (
+            (('sourceCommit',), 'b' * 40),
+            (('executableSha256',), '0' * 64),
+            (('modules', 1, 'sha256'), '0' * 64),
+            (('events',), original['events'][:4]),
+            (('events', 2, 'elapsedMs'), original['events'][1]['elapsedMs']),
+            (('events', 4, 'elapsedMs'), original['events'][3]['elapsedMs'] + 2999),
+            (('events', 2, 'screenshot', 'sha256'), '0' * 64),
+            (('events', 2, 'sentInputs'), 1),
+            (('events', 2, 'inputFinal', 'hitProcessId'), 999),
+            (('cleanup', 'ownedJobClosed'), False),
+            (('survivedUntilCleanup',), False),
+            (('errors',), ['Observed startup error']),
+        )
+        for path, value in mutations:
+            with self.subTest(path=path):
+                self.report = copy.deepcopy(original)
+                target = self.report
+                for key in path[:-1]:
+                    target = target[key]
+                target[path[-1]] = value
+                self.reject()
+
     def test_distribution_brand_and_version_come_from_actual_configuration(self):
         self.assertEqual(self.production_brand, ['WaveWeft', '1.0.1', 'com.trieflow.WaveQuay'])
         self.assertEqual(self.production_title, 'WaveWeft 1.0.1')

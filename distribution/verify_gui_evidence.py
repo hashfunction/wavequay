@@ -13,6 +13,12 @@ import struct
 
 PAGES = (('Select a theme', 'Next'), ('Clip visualization', 'Next'),
          ('What UI layout (workspace) do you want?', 'Accept & continue'))
+# Exact settled names emitted by Muse's focused page-reading controls.
+CONTEXTUAL_PAGE_NAMES = {
+    'Clip visualization': 'Clip visualization options panel, Clip visualization. Next',
+    'What UI layout (workspace) do you want?':
+        'Workspace layout options panel, What UI layout (workspace) do you want?. Accept & continue',
+}
 QT_MODULES = {'qt6core.dll', 'qt6gui.dll', 'qt6qml.dll', 'qt6quick.dll', 'qwindows.dll'}
 
 
@@ -160,7 +166,9 @@ def verify(report, inventory, evidence_dir, expected_commit):
     for event, (page, button) in zip(events[:3], PAGES):
         require(event['kind'] == 'onboarding' and event['title'] == 'Getting started'
                 and event['page'] == page and event['button'] == button, 'Unexpected onboarding page/order')
-        require(visible_node(event, page, pid) or visible_node(event, page + '. ' + button, pid, button=True),
+        contextual_name = CONTEXTUAL_PAGE_NAMES.get(page)
+        require(visible_node(event, page, pid) or visible_node(event, page + '. ' + button, pid, button=True)
+                or (contextual_name is not None and visible_node(event, contextual_name, pid, button=True)),
                 'Missing real accessible onboarding page')
         if event['interaction'] == 'uia-invoke':
             require(any(n.get('invoke') and n.get('name') == button and n.get('enabled') is True
