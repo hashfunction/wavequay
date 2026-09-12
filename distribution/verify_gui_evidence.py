@@ -7,6 +7,7 @@ an inventoried stage can supply product qualification evidence.
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path, PureWindowsPath
 import struct
 
@@ -40,8 +41,64 @@ def visible_node(event, name, pid, button=False):
                for n in event['tree'])
 
 
+def verify_native_click(event, button, pid):
+    snapshots = (event.get('inputBefore'), event.get('inputFinal'))
+    require(all(isinstance(v, dict) for v in snapshots) and event.get('sentInputs') == 2,
+            'Native click lacks complete before/final/input observations')
+    before, final = snapshots
+    require(before == final, 'Onboarding input ownership or geometry changed')
+    require(before.get('name') == button and before.get('controlType') == 'Button'
+            and before.get('enabled') is True and before.get('offscreen') is False
+            and before.get('windowTitle') == 'Getting started' and before.get('matchingButtons') == 1,
+            'Native input target is not the unique visible onboarding button')
+    for field in ('processId', 'nativeWindowProcessId', 'foregroundProcessId', 'hitProcessId'):
+        require(type(before.get(field)) is int and before[field] == pid, 'Native input process ownership differs')
+    handle = before.get('windowHandle')
+    require(type(handle) is int and handle != 0 and before.get('foregroundHandle') == handle
+            and before.get('hitRootHandle') == handle, 'Native click targeted another window')
+    bounds = [before.get(field) for field in ('buttonBounds', 'windowBounds', 'desktopBounds')]
+    require(all(isinstance(b, list) and len(b) == 4 and all(type(n) in (int, float) and math.isfinite(n) for n in b)
+                and b[2] > 0 and b[3] > 0 for b in bounds), 'Invalid native input geometry')
+    target, window, desktop = bounds
+    require(event.get('cursorPosition') == before.get('point'), 'Cursor was not at the observed button before input')
+    def contains(outer, inner):
+        return inner[0] >= outer[0] and inner[1] >= outer[1] and inner[0] + inner[2] <= outer[0] + outer[2] and inner[1] + inner[3] <= outer[1] + outer[3]
+    require(target[2] >= 4 and target[3] >= 4 and contains(window, target) and contains(desktop, window)
+            and before.get('point') == [math.floor(target[0] + target[2] / 2), math.floor(target[1] + target[3] / 2)],
+            'Native click was outside the observed fully visible button/window')
+    buttons = [n for n in event['tree'] if n.get('name') == button and n.get('controlType') == 'Button'
+               and n.get('processId') == pid and n.get('enabled') is True and n.get('offscreen') is False]
+    windows = [n for n in event['tree'] if n.get('name') == 'Getting started' and n.get('controlType') == 'Window'
+               and n.get('processId') == pid and n.get('nativeWindowHandle') == handle]
+    require(len(buttons) == 1 and buttons[0].get('bounds') == target and len(windows) == 1
+            and windows[0].get('bounds') == window, 'Native click differs from the captured UIA button/window')
+
+
+def verify_display(evidence_dir, expected_commit):
+    path = Path(evidence_dir) / 'display-preparation.json'
+    require(path.is_file() and not path.is_symlink(), 'Missing native display preparation/restore evidence')
+    record = json.loads(path.read_text(encoding='utf-8-sig'))
+    require(record.get('schema_version') == 1 and record.get('source_commit') == expected_commit
+            and record.get('restore_error') is None, 'Display evidence source/restoration differs')
+    d = record['display']
+    require(d['restore_verified'] is True and d['restored'] == d['before'] and bool(d['device']),
+            'Original native display mode was not restored')
+    require(all(d[k] is False for k in ('registry_updated', 'unsafe_modes_enabled', 'dpi_changed', 'renderer_emulation_used')),
+            'Unapproved display preparation')
+    require(d['after']['width'] >= 1472 and d['after']['height'] >= 1080 and d['after']['bits'] == 32,
+            'Native display is inadequate for full-window evidence')
+    if d['selected'] is not None:
+        require(d['selected'] in d['supported_modes'] and d['after'] == d['selected']
+                and d['test_result'] == 0 and d['apply_result'] == 0 and d['restore_result'] == 0,
+                'Native display mode was not enumerated, tested, applied and restored')
+    else:
+        require(d['before'] == d['after'] and all(d[k] is None for k in ('test_result', 'apply_result', 'restore_result')),
+                'Unchanged native display evidence differs')
+
+
 def verify(report, inventory, evidence_dir, expected_commit):
     expected_title = load_expected_title()
+    verify_display(evidence_dir, expected_commit)
     require(report.get('expectedMainWindowTitle') == expected_title, 'Observer used a different expected title')
     require(report['schemaVersion'] == 1 and report['sourceCommit'] == expected_commit, 'Wrong evidence/source revision')
     require(len(expected_commit) == 40, 'Expected an exact source commit')
@@ -109,6 +166,8 @@ def verify(report, inventory, evidence_dir, expected_commit):
             require(any(n.get('invoke') and n.get('name') == button and n.get('enabled') is True
                         and n.get('offscreen') is False and n.get('processId') == pid and n.get('controlType') == 'Button'
                         for n in event['tree']), 'No accessible button was invoked')
+        elif event['interaction'] == 'owned-native-button-click':
+            verify_native_click(event, button, pid)
         else:
             require(event['interaction'] == 'uia-focused-enter' and event.get('focusedName') == page + '. ' + button
                     and event.get('focusedProcessId') == pid and event.get('foregroundProcessId') == pid,

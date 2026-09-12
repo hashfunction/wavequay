@@ -28,6 +28,8 @@ if ($SelfTest) {
     foreach ($argument in @('-Stage',[IO.Path]::GetFullPath($Stage),'-SourceCommit',$SourceCommit,
         '-ExpectedMainWindowTitle',$expectedTitle)) { $start.ArgumentList.Add($argument) }
 }
+. (Join-Path $PSScriptRoot 'windows-gui/display-modes.ps1')
+$observe = {
 $child = [Diagnostics.Process]::new()
 $child.StartInfo = $start
 $clock = [Diagnostics.Stopwatch]::StartNew()
@@ -66,5 +68,18 @@ try {
         # after the owned helper/process tree is stopped, even when it failed.
         & python (Join-Path $PSScriptRoot 'collect_application_logs.py') --report (Join-Path $EvidenceDirectory 'gui-observations.json')
         if ($LASTEXITCODE -ne 0) { Write-Warning 'Application log capture was incomplete; inspect application-logs.json.' }
+    }
+}
+
+}
+if ($SelfTest) { & $observe }
+else {
+    $displayFile=Join-Path $EvidenceDirectory 'display-preparation.json'
+    if (Test-Path -LiteralPath $displayFile) { throw 'Display evidence already exists and will not be replaced.' }
+    $display=@{displayOriginalMode=$null;displayDevice=$null;displayRestoreRequired=$false;displayEvidence=$null;displayRestoreError=$null}
+    Invoke-GuiDisplayScope $display $observe {
+        $json=@{schema_version=1;source_commit=$SourceCommit;display=$display.displayEvidence;restore_error=$display.displayRestoreError} | ConvertTo-Json -Depth 12
+        $stream=[IO.File]::Open($displayFile,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+        try {$bytes=[Text.UTF8Encoding]::new($false).GetBytes($json);$stream.Write($bytes,0,$bytes.Length)} finally {$stream.Dispose()}
     }
 }

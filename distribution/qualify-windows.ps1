@@ -24,6 +24,8 @@ $result = @{ source_commit=$sourceCommit; built=$false; native_recipe_tests=$fal
     source_license_closure=$false; submitted=$false }
 try {
     Invoke-Checked python @('-m','unittest','discover','-s','distribution/tests','-v')
+    & ./distribution/windows-gui/test_onboarding_input.ps1
+    & ./distribution/windows-gui/test_display_modes.ps1
     & ./distribution/invoke-windows-gui.ps1 -SelfTest -EvidenceDirectory (Join-Path (Get-Location) 'build-evidence/gui-helper')
     Invoke-Checked cmake @('-S','.ci-googletest','-B','build-gtest','-G','Ninja','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CXX_STANDARD=17','-Dgtest_force_shared_crt=ON','-DBUILD_GMOCK=ON',"-DCMAKE_INSTALL_PREFIX=$(Get-Location)/.ci-gtest-install")
     Invoke-Checked cmake @('--build','build-gtest','--parallel','2')

@@ -91,6 +91,28 @@ namespace WaveQuayQualification
         [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr window, out Rect rect);
         [DllImport("user32.dll")] private static extern bool SetProcessDPIAware();
 
+        [StructLayout(LayoutKind.Sequential)] private struct NativePoint { public int X, Y; }
+        [StructLayout(LayoutKind.Sequential)] private struct MouseInput
+        {
+            public int X, Y;
+            public uint Data, Flags, Time;
+            public UIntPtr ExtraInfo;
+        }
+        [StructLayout(LayoutKind.Explicit)] private struct InputUnion
+        {
+            [FieldOffset(0)] public MouseInput Mouse;
+        }
+        [StructLayout(LayoutKind.Sequential)] private struct Input
+        {
+            public uint Type;
+            public InputUnion Value;
+        }
+        [DllImport("user32.dll")] private static extern IntPtr WindowFromPoint(NativePoint point);
+        [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr window, uint flags);
+        [DllImport("user32.dll", SetLastError = true)] private static extern bool SetCursorPos(int x, int y);
+        [DllImport("user32.dll", SetLastError = true)] private static extern bool GetCursorPos(out NativePoint point);
+        [DllImport("user32.dll", SetLastError = true)] private static extern uint SendInput(uint count, Input[] inputs, int size);
+
         private static Dictionary<string, object> D(params object[] pairs)
         {
             var d = new Dictionary<string, object>();
@@ -243,35 +265,103 @@ namespace WaveQuayQualification
                 return D("path", filename, "sha256", Hash(path), "width", bounds.Width, "height", bounds.Height, "sampledColors", colors.Count);
             }
         }
-        private static void Advance(AutomationElement window, Dictionary<string, object> observation, string page, string button, int pid)
+        private static AutomationElement NextButton(AutomationElement window, string button, int pid)
         {
-            var buttons = window.FindAll(TreeScope.Descendants, new AndCondition(
+            var found = window.FindAll(TreeScope.Descendants, new AndCondition(
                 new PropertyCondition(AutomationElement.NameProperty, button),
-                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button)));
-            foreach (AutomationElement candidate in buttons)
+                new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button),
+                new PropertyCondition(AutomationElement.ProcessIdProperty, pid),
+                new PropertyCondition(AutomationElement.IsEnabledProperty, true),
+                new PropertyCondition(AutomationElement.IsOffscreenProperty, false)));
+            if (found.Count != 1) throw new InvalidOperationException("Expected exactly one enabled visible onboarding button");
+            return found[0];
+        }
+        private static ButtonInputSnapshot InputSnapshot(Process process, AutomationElement window, string button)
+        {
+            process.Refresh();
+            Alive(process);
+            var target = NextButton(window, button, process.Id).Current;
+            var dialog = window.Current;
+            var handle = new IntPtr(dialog.NativeWindowHandle);
+            Rect rectangle;
+            if (handle == IntPtr.Zero || !GetWindowRect(handle, out rectangle)) throw new Win32Exception();
+            var bounds = target.BoundingRectangle;
+            var point = new NativePoint { X = (int)Math.Floor(bounds.X + bounds.Width / 2), Y = (int)Math.Floor(bounds.Y + bounds.Height / 2) };
+            var foreground = GetForegroundWindow();
+            var hit = WindowFromPoint(point);
+            uint nativePid, foregroundPid, hitPid;
+            GetWindowThreadProcessId(handle, out nativePid);
+            GetWindowThreadProcessId(foreground, out foregroundPid);
+            GetWindowThreadProcessId(hit, out hitPid);
+            var desktop = SystemInformation.VirtualScreen;
+            return new ButtonInputSnapshot {
+                name = target.Name, controlType = target.ControlType.ProgrammaticName.Replace("ControlType.", ""),
+                enabled = target.IsEnabled, offscreen = target.IsOffscreen, processId = target.ProcessId, matchingButtons = 1,
+                windowTitle = dialog.Name, windowHandle = handle.ToInt64(), nativeWindowProcessId = checked((int)nativePid),
+                foregroundHandle = foreground.ToInt64(), foregroundProcessId = checked((int)foregroundPid),
+                hitRootHandle = GetAncestor(hit, 2).ToInt64(), hitProcessId = checked((int)hitPid),
+                buttonBounds = new double[] { bounds.X, bounds.Y, bounds.Width, bounds.Height },
+                windowBounds = new double[] { rectangle.Left, rectangle.Top, rectangle.Right - rectangle.Left, rectangle.Bottom - rectangle.Top },
+                desktopBounds = new double[] { desktop.X, desktop.Y, desktop.Width, desktop.Height },
+                point = new int[] { point.X, point.Y }
+            };
+        }
+        private static void Advance(Process process, AutomationElement window, Dictionary<string, object> observation, string button)
+        {
+            // The real Next button is visible in the provider, but Muse does not
+            // expose InvokePattern for it. Do not infer its action from the name
+            // of Page.qml's separately focused screen-reader surrogate.
+            var handle = new IntPtr(window.Current.NativeWindowHandle);
+            var before = InputSnapshot(process, window, button);
+            observation["inputBefore"] = before;
+            OnboardingInput.Validate(before, button, process.Id, handle.ToInt64());
+            object pattern;
+            var candidate = NextButton(window, button, process.Id);
+            if (candidate.TryGetCurrentPattern(InvokePattern.Pattern, out pattern))
             {
-                object p;
-                if (candidate.Current.ProcessId == pid && candidate.Current.IsEnabled && !candidate.Current.IsOffscreen
-                    && candidate.TryGetCurrentPattern(InvokePattern.Pattern, out p))
-                {
-                    ((InvokePattern)p).Invoke();
-                    observation["interaction"] = "uia-invoke";
-                    return;
-                }
+                var finalInvoke = InputSnapshot(process, window, button);
+                OnboardingInput.RequireStable(before, finalInvoke, button, process.Id, handle.ToInt64());
+                ((InvokePattern)pattern).Invoke();
+                observation["interaction"] = "uia-invoke";
+                return;
             }
-            // FirstLaunchSetupDialog.qml deliberately ignores the active Next button
-            // and focuses Page.qml's accessible “page. Next” reading surrogate.
-            // Enter is allowed only with that exact UIA focus and our foreground PID.
-            var focused = AutomationElement.FocusedElement.Current;
-            uint foregroundPid;
-            GetWindowThreadProcessId(GetForegroundWindow(), out foregroundPid);
-            if (focused.ProcessId != pid || foregroundPid != pid || focused.Name != page + ". " + button)
-                throw new InvalidOperationException("No enabled accessible Next button or verified page focus");
-            observation["focusedName"] = focused.Name;
-            observation["focusedProcessId"] = focused.ProcessId;
-            observation["foregroundProcessId"] = foregroundPid;
-            observation["interaction"] = "uia-focused-enter";
-            SendKeys.SendWait("{ENTER}");
+            if (!SetCursorPos(before.point[0], before.point[1])) throw new Win32Exception();
+            var final = InputSnapshot(process, window, button);
+            observation["inputFinal"] = final;
+            OnboardingInput.RequireStable(before, final, button, process.Id, handle.ToInt64());
+            NativePoint cursor;
+            if (!GetCursorPos(out cursor) || cursor.X != final.point[0] || cursor.Y != final.point[1])
+                throw new InvalidOperationException("Cursor moved away from the observed owned button before input");
+            observation["cursorPosition"] = new int[] { cursor.X, cursor.Y };
+            // Mouse down/up use one native call, after final ownership and hit
+            // checks. No coordinates are guessed or retained across page changes.
+            var inputs = new[] {
+                new Input { Type = 0, Value = new InputUnion { Mouse = new MouseInput { Flags = 0x0002 } } },
+                new Input { Type = 0, Value = new InputUnion { Mouse = new MouseInput { Flags = 0x0004 } } }
+            };
+            uint sent = SendInput(2, inputs, Marshal.SizeOf(typeof(Input)));
+            observation["sentInputs"] = sent;
+            if (sent != 2)
+            {
+                int error = Marshal.GetLastWin32Error();
+                // A partially inserted pair must never count as advancement.
+                // Release a possibly pressed button only while the same owned
+                // target and cursor are still proved; otherwise retain the error.
+                if (sent == 1)
+                {
+                    try
+                    {
+                        var release = InputSnapshot(process, window, button);
+                        OnboardingInput.RequireStable(final, release, button, process.Id, handle.ToInt64());
+                        if (!GetCursorPos(out cursor) || cursor.X != release.point[0] || cursor.Y != release.point[1])
+                            throw new InvalidOperationException("Cannot release partial mouse input after cursor movement");
+                        observation["partialInputReleaseSent"] = SendInput(1, new[] { inputs[1] }, Marshal.SizeOf(typeof(Input)));
+                    }
+                    catch (Exception releaseError) { observation["partialInputReleaseError"] = releaseError.Message; }
+                }
+                throw new Win32Exception(error, "Native onboarding click was incomplete");
+            }
+            observation["interaction"] = "owned-native-button-click";
         }
         private static List<Dictionary<string, object>> Modules(Process process)
         {
@@ -403,7 +493,7 @@ namespace WaveQuayQualification
                                     "screenshot", Screenshot(window, directory, "onboarding-" + (page + 1) + ".png", process.Id));
                                 events.Add(observation);
                                 Save(reportPath, report);
-                                Advance(window, observation, Pages[page], Buttons[page], process.Id);
+                                Advance(process, window, observation, Buttons[page]);
                                 Save(reportPath, report);
                                 page++;
                                 break;
@@ -511,6 +601,9 @@ namespace WaveQuayQualification
 
         public static string SelfTest()
         {
+            if (IntPtr.Size != 8 || Marshal.SizeOf(typeof(Input)) != 40 || Marshal.OffsetOf(typeof(Input), "Value").ToInt32() != 8
+                || Marshal.SizeOf(typeof(MouseInput)) != 32 || Marshal.SizeOf(typeof(NativePoint)) != 8)
+                throw new InvalidOperationException("Native x64 mouse input structure layout differs");
             string ignored;
             bool staleIgnored = !TryWindow<string>(AutomationElement.RootElement,
                 element => { throw new ElementNotAvailableException("Destroyed native-window fixture"); }, out ignored);
@@ -541,7 +634,7 @@ namespace WaveQuayQualification
                 }
                 finally { if (!child.HasExited) child.Kill(); }
             }
-            return Json.Serialize(D("ownedJobCleanup", true, "staleAutomationElementIgnored", staleIgnored,
+            return Json.Serialize(D("nativeMouseInputAbiVerified", true, "ownedJobCleanup", true, "staleAutomationElementIgnored", staleIgnored,
                 "nonStaleAutomationErrorPropagated", otherErrorPropagated, "desktopUiaName", AutomationElement.RootElement.Current.Name,
                 "uiaAssembly", typeof(AutomationElement).Assembly.Location, "framework", Environment.Version.ToString(),
                 "windows", Environment.OSVersion.ToString()));

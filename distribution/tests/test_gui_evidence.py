@@ -52,6 +52,12 @@ class GuiEvidenceTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name)
+        mode = dict(width=1920, height=1080, bits=32, frequency=60, orientation=0, flags=0)
+        self.display = dict(schema_version=1, source_commit='a' * 40, restore_error=None,
+            display=dict(device='fixture-primary', before=mode, after=mode, restored=mode, restore_verified=True,
+                selected=None, supported_modes=[mode], test_result=None, apply_result=None, restore_result=None,
+                registry_updated=False, unsafe_modes_enabled=False, dpi_changed=False, renderer_emulation_used=False))
+        self.write_display()
         # A deterministic PNG fixture; never represented as a product screenshot.
         def chunk(kind, data):
             return struct.pack('!I', len(data)) + kind + data + struct.pack('!I', zlib.crc32(kind + data))
@@ -145,6 +151,50 @@ class GuiEvidenceTests(unittest.TestCase):
         self.report['events'][0]['focusedProcessId'] = 123
         self.report['events'][0]['foregroundProcessId'] = 123
         self.verify()
+
+    def write_display(self):
+        (self.directory / 'display-preparation.json').write_text(json.dumps(self.display))
+
+    def test_native_click_requires_real_observed_button_and_stable_ownership(self):
+        event = self.report['events'][1]
+        event['interaction'] = 'owned-native-button-click'
+        event['sentInputs'] = 2
+        event['cursorPosition'] = [714,561]
+        event['tree'].append(dict(self.node('Getting started', 'Window'), nativeWindowHandle=262498, bounds=[232,143,560,442]))
+        event['tree'][1]['bounds'] = [648,547,132,28]
+        snapshot = dict(name='Next', controlType='Button', windowTitle='Getting started', enabled=True, offscreen=False,
+            matchingButtons=1, processId=123, nativeWindowProcessId=123, foregroundProcessId=123, hitProcessId=123,
+            windowHandle=262498, foregroundHandle=262498, hitRootHandle=262498,
+            buttonBounds=[648,547,132,28], windowBounds=[232,143,560,442], desktopBounds=[0,0,1920,1080], point=[714,561])
+        event['inputBefore'] = copy.deepcopy(snapshot); event['inputFinal'] = copy.deepcopy(snapshot)
+        self.verify()
+        for field, value in [('processId',999),('nativeWindowProcessId',999),('foregroundProcessId',999),('hitProcessId',999),
+                ('foregroundHandle',262616),('hitRootHandle',262616),('matchingButtons',2),('name','Clip visualization. Next'),
+                ('enabled',False),('offscreen',True),('point',[0,0]),('buttonBounds',[0,0,132,28]),('desktopBounds',[0,0,700,500])]:
+            with self.subTest(field=field):
+                # Coherently mutate both snapshots: independent policy must reject.
+                event['inputBefore'] = dict(snapshot, **{field: value}); event['inputFinal'] = dict(snapshot, **{field: value})
+                self.reject()
+        event['inputBefore'] = copy.deepcopy(snapshot); event['inputFinal'] = copy.deepcopy(snapshot)
+        event['inputFinal']['desktopBounds'] = [0,0,2560,1440]; self.reject()
+        event['inputFinal'] = copy.deepcopy(snapshot); event['sentInputs'] = 1; self.reject()
+        event['sentInputs'] = 2; event['cursorPosition'] = [715,561]; self.reject()
+        event['cursorPosition'] = [714,561]; event['tree'][1]['bounds'] = [647,547,132,28]; self.reject()
+
+    def test_display_mutations_and_failed_restore_rejected(self):
+        original = copy.deepcopy(self.display)
+        for field, value in [('restore_verified',False),('restored',{}),('renderer_emulation_used',True),('registry_updated',True),
+                              ('unsafe_modes_enabled',True),('dpi_changed',True),('after',dict(width=1024,height=768,bits=32))]:
+            with self.subTest(field=field):
+                self.display = copy.deepcopy(original); self.display['display'][field] = value; self.write_display(); self.reject()
+        self.display = copy.deepcopy(original); self.display['source_commit'] = 'b' * 40; self.write_display(); self.reject()
+        self.display = copy.deepcopy(original); d = self.display['display']; selected = copy.deepcopy(d['before'])
+        d.update(before=dict(width=1024,height=768,bits=32,frequency=60,orientation=0,flags=0),selected=selected,
+                 test_result=0,apply_result=0,restore_result=0)
+        d['restored'] = copy.deepcopy(d['before']); self.write_display(); self.verify()
+        for field, value in [('supported_modes',[]),('test_result',-1),('apply_result',-1),('restore_result',-1)]:
+            with self.subTest(field=field):
+                saved = d[field]; d[field] = value; self.write_display(); self.reject(); d[field] = saved
 
     def test_too_short_observation_rejected(self):
         self.report['events'][-1]['elapsedMs'] = 6001
