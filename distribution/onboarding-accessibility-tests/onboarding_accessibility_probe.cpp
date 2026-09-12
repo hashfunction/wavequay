@@ -145,6 +145,7 @@ static QObject* qmlObject(QObject* root, const QString& id)
         if (auto object = qmlObject(child, id)) return object;
     return nullptr;
 }
+#include "recipe_dialog_accessibility_tests.h"
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -350,6 +351,7 @@ int main(int argc, char** argv)
     require(dynamic_cast<AccessibleWindowInterface*>(mainInterface)
             && namedBySibling(mainInterface, "Main editor focus") && mainInterface->focusChild(),
             "main editor provider and sibling/focus routes survive onboarding destruction");
+    recipeDialogAccessibilityTests(engine, mainWindow);
     mainFocus.reset();
     mainPanel.reset();
     qInfo() << "Onboarding probe: dialog destroyed";

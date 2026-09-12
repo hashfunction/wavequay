@@ -14,16 +14,19 @@ StyledDialogView {
     required property var recipeModel
     property string selectedId: ""
     property bool confirming: false
-    property NavigationPanel panel: NavigationPanel {
-        name: "ManageRecipesPanel"
-        section: root.navigationSection
-        order: 1
-    }
+    property alias panel: recipePanel
     onNavigationActivateRequested: chooser.navigation.requestActive()
     ColumnLayout {
         id: body
         width: root.contentWidth
         spacing: 12
+        // Muse resolves the window through the panel's visual QObject ancestor.
+        NavigationPanel {
+            id: recipePanel
+            name: "ManageRecipesPanel"
+            section: root.navigationSection
+            order: 1
+        }
         StyledDropdown {
             id: chooser
             Layout.fillWidth: true

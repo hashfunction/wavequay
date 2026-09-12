@@ -123,3 +123,24 @@ assertions or the 30-second process deadline. The minimal controller component
 proves Qt ownership/class semantics, not the full export service or Windows
 UIA. See `distribution/windows-gui/accessibility-graph-review.md` for the
 original native trace, fixture boundaries and fresh-run interpretation.
+
+## Recipe dialog window ownership regression
+
+The same four provider-order/main-window variants load byte-for-byte copies of
+both production recipe dialogs. Each is nested below an outer export content
+item and its content is attached to a separate real QQuickView, matching
+WindowView's QObject/content/transient-parent sequence. The test proves that
+the panel and all three Manage/six Save controls resolve the same own window
+before it has a native handle, that the closed panel is absent from the outer
+tree, and that opening preserves own-window sibling traversal, input focus and
+the original close control. Hiding the window again cannot move its panel back
+to the export tree.
+
+The recipe model is an in-memory fixture and the text/dropdown rendering leaves
+are substitutes with real Muse NavigationControl instances and the production
+visual-parent topology (including the input's hidden clear button). The two
+recipe QML files, StyledDialogView, FlatButton, navigation/controller and all
+accessible providers run unchanged. This tests the original QML ownership
+defect; it does not claim Windows COM/UIA or recipe/audio workflow acceptance.
+See `distribution/windows-gui/recipe-dialog-ownership-review.md` for the
+original Windows graph and independent red/green evidence.

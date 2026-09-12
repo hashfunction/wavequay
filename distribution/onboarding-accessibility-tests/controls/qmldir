@@ -8,3 +8,5 @@ NavigationFocusBorder 1.0 NavigationFocusBorder.qml
 StyledRectangularShadow 1.0 StyledRectangularShadow.qml
 SeparatorLine 1.0 SeparatorLine.qml
 singleton IconCode 1.0 IconCode.qml
+TextInputField 1.0 TextInputField.qml
+StyledDropdown 1.0 StyledDropdown.qml

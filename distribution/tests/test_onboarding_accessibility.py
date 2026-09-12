@@ -56,6 +56,8 @@ class OnboardingAccessibilityTests(unittest.TestCase):
             "Onboarding probe: dialog component created",
             "Onboarding probe: offscreen views shown",
             "Onboarding probe: popup interface queried",
+            "Recipe dialog closed/open/closed ownership passed ManageExportRecipesDialog",
+            "Recipe dialog closed/open/closed ownership passed SaveExportRecipeDialog",
             "Onboarding probe: dialog destroyed",
             "Onboarding accessibility runtime passed",
         ):

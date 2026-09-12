@@ -15,11 +15,7 @@ StyledDialogView {
     property string recipeName: ""
     property int duplicateIndex: 0
     property var duplicates: recipeModel.recipes.filter(function (r) { return r.name === recipeName.trim() })
-    property NavigationPanel panel: NavigationPanel {
-        name: "SaveRecipePanel"
-        section: root.navigationSection
-        order: 1
-    }
+    property alias panel: recipePanel
     onNavigationActivateRequested: nameField.navigation.requestActive()
     function save(id, allowDuplicate) {
         if (recipeModel.saveCurrentRecipe(recipeName, id, allowDuplicate)) root.accept()
@@ -28,6 +24,13 @@ StyledDialogView {
         id: body
         width: root.contentWidth
         spacing: 12
+        // Muse resolves the window through the panel's visual QObject ancestor.
+        NavigationPanel {
+            id: recipePanel
+            name: "SaveRecipePanel"
+            section: root.navigationSection
+            order: 1
+        }
         StyledTextLabel {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
