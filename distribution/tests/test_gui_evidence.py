@@ -103,6 +103,26 @@ class GuiEvidenceTests(unittest.TestCase):
         except ValueError as error:
             self.fail(f'Rejected actual configured title {self.production_title!r}: {error}')
 
+    def test_exact_contextual_add_track_button_passes_with_plain_text_panel(self):
+        for event in self.report['events'][3:]:
+            event['tree'] = [self.node('Playback toolbar', 'Text'), self.node('Add track', 'Text'),
+                             self.node('Add track panel, Add track', 'Button')]
+        self.verify()
+
+    def test_contextual_button_does_not_relax_role_ownership_visibility_or_exact_name(self):
+        original = copy.deepcopy(self.report)
+        for key, value in (('controlType', 'Text'), ('controlType', 'Pane'), ('enabled', False),
+                           ('offscreen', True), ('processId', 999), ('name', 'Other panel, Add track'),
+                           ('name', 'Add track panel, Add track extra'), ('name', 'Add track panel, Add track '),
+                           ('name', 'prefix Add track'), ('name', 'Add track panel')):
+            with self.subTest(key=key, value=value):
+                self.report = copy.deepcopy(original)
+                event = self.report['events'][-1]
+                button = self.node('Add track panel, Add track', 'Button')
+                button[key] = value
+                event['tree'] = [self.node('Playback toolbar', 'Text'), self.node('Add track', 'Text'), button]
+                self.reject()
+
     def test_distribution_brand_and_version_come_from_actual_configuration(self):
         self.assertEqual(self.production_brand, ['WaveWeft', '1.0.1', 'com.trieflow.WaveQuay'])
         self.assertEqual(self.production_title, 'WaveWeft 1.0.1')

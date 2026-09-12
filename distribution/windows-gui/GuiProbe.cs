@@ -509,7 +509,9 @@ namespace WaveQuayQualification
                             {
                                 if (window.Current.Name != expectedMainWindowTitle || window.Current.IsOffscreen) continue;
                                 var tree = Tree(window);
-                                if (!Has(tree, "Playback toolbar", process.Id, false) || !Has(tree, "Add track", process.Id, true)) continue;
+                                // Muse prefixes the focused control with its current panel name.
+                                // Both exact forms still require an owned, enabled, visible Button.
+                                if (!Has(tree, "Playback toolbar", process.Id, false) || !(Has(tree, "Add track", process.Id, true) || Has(tree, "Add track panel, Add track", process.Id, true))) continue;
                                 if (firstMain >= 0 && clock.ElapsedMilliseconds - firstMain < 3000) continue;
                                 var observation = D("kind", "main-window", "title", window.Current.Name, "processId", process.Id,
                                     "elapsedMs", clock.ElapsedMilliseconds, "tree", tree,

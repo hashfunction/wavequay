@@ -174,7 +174,10 @@ def verify(report, inventory, evidence_dir, expected_commit):
                     'Keyboard input without verified accessible/foreground focus')
     for event in events[3:]:
         require(event['kind'] == 'main-window' and event['title'] == expected_title, 'Wrong main window')
-        require(visible_node(event, 'Playback toolbar', pid) and visible_node(event, 'Add track', pid, button=True),
+        # Muse announces the focused Add track button with its exact panel context.
+        require(visible_node(event, 'Playback toolbar', pid)
+                and (visible_node(event, 'Add track', pid, button=True)
+                     or visible_node(event, 'Add track panel, Add track', pid, button=True)),
                 'Missing meaningful editing controls')
         require(not any(n.get('name') == 'Getting started' for n in event['tree']), 'Onboarding still covers editor')
     require(events[4]['elapsedMs'] - events[3]['elapsedMs'] >= 3000, 'Main window did not remain available')
