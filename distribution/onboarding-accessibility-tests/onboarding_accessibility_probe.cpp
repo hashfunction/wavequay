@@ -114,6 +114,25 @@ static QAccessibleInterface* named(QAccessibleInterface* parent, const QString& 
         if (auto found = named(parent->child(i), name)) return found;
     return nullptr;
 }
+static QAccessibleInterface* namedBySibling(QAccessibleInterface* parent, const QString& name, int depth = 0)
+{
+    require(depth < 64, "accessible sibling traversal remains bounded");
+    if (!parent || !parent->isValid() || parent->state().invisible) return nullptr;
+    if (parent->text(QAccessible::Name) == name) return parent;
+    // Qt6.11.2 Windows UIA Navigate uses the child's parent/indexOfChild to
+    // obtain the next sibling, rather than iterating the original root's list.
+    int index = 0;
+    while (index < parent->childCount()) {
+        auto child = parent->child(index);
+        if (!child || !child->isValid() || child->state().invisible) { ++index; continue; }
+        require(child->parent() == parent, "UIA sibling traversal must stay under the same accessible parent");
+        const int parentIndex = child->parent()->indexOfChild(child);
+        require(parentIndex == index, "UIA sibling navigation must find the same child index");
+        if (auto found = namedBySibling(child, name, depth + 1)) return found;
+        index = parentIndex + 1;
+    }
+    return nullptr;
+}
 static QObject* qmlObject(QObject* root, const QString& id)
 {
     if (auto context = qmlContext(root))
@@ -196,6 +215,21 @@ int main(int argc, char** argv)
     for (const auto key : {"itemOpacityDisabled", "buttonOpacityNormal", "borderWidth", "buttonOpacityHit"}) theme[key] = 1.0;
     theme["defaultButtonSize"] = 28;
     engine.rootContext()->setContextProperty("ui", QVariantMap{{"theme", theme}});
+    // The installed main window has its own accessible controls before opening
+    // onboarding. Keep one present so a popup cannot borrow that window's tree.
+    auto mainPanel = std::make_unique<ui::AccessibleItem>(ctx);
+    mainPanel->setRole(ui::MUAccessible::Panel);
+    mainPanel->setName("List");
+    mainPanel->setVisualItem(mainWindow.contentItem());
+    mainPanel->setState(IAccessible::State::Focused, true);
+    mainPanel->componentComplete();
+    auto mainFocus = std::make_unique<ui::AccessibleItem>(ctx);
+    mainFocus->setAccessibleParent(mainPanel.get());
+    mainFocus->setRole(ui::MUAccessible::Button);
+    mainFocus->setName("Main editor focus");
+    mainFocus->setVisualItem(mainWindow.contentItem());
+    mainFocus->setState(IAccessible::State::Focused, true);
+    mainFocus->componentComplete();
     qmlRegisterType<au::appshell::FirstLaunchSetupModel>("Audacity.AppShell", 1, 0, "FirstLaunchSetupModel");
     qmlRegisterType<ui::AccessibleItem>("Muse.Ui", 1, 0, "AccessibleItem");
     qmlRegisterType<ui::NavigationSection>("Muse.Ui", 1, 0, "NavigationSection");
@@ -221,6 +255,17 @@ int main(int argc, char** argv)
     auto windowInterface = QAccessible::queryAccessibleInterface(&popup);
     qInfo() << "Onboarding probe: popup interface queried";
     require(dynamic_cast<AccessibleWindowInterface*>(windowInterface), "QQuickView must use the registered Muse window provider");
+    for (int index = 0; index < windowInterface->childCount(); ++index) {
+        auto child = windowInterface->child(index);
+        require(child && child->window() == &popup, "popup children must belong to the popup, not its transient parent");
+        require(child->parent() == windowInterface && windowInterface->indexOfChild(child) == index,
+                "popup children must preserve parent/indexOfChild round trips used by Windows UIA sibling navigation");
+    }
+    auto mainInterface = QAccessible::queryAccessibleInterface(&mainWindow);
+    auto mainItemInterface = named(mainInterface, "List");
+    require(mainItemInterface && !named(windowInterface, "List"), "main controls remain in their own window only");
+    require(windowInterface->indexOfChild(mainItemInterface) == -1 && !windowInterface->child(-1)
+            && !windowInterface->child(windowInterface->childCount()), "foreign children and out-of-range child indexes are rejected");
     qInfo() << "Muse QQuickView provider selected; Qt" << qVersion();
     auto model = qmlObject(dialog, "model");
     auto next = qobject_cast<QQuickItem*>(qmlObject(dialog, "nextStepButton"));
@@ -239,6 +284,7 @@ int main(int argc, char** argv)
         auto focus = windowInterface->focusChild();
         require(focus->role() == QAccessible::Button && !focus->state().disabled && focus->state().focused, "focused surrogate is an enabled Button");
         require(named(windowInterface, pages[index]) == focus, "focused surrogate is reachable in the popup tree");
+        require(namedBySibling(windowInterface, pages[index]) == focus, "Windows UIA sibling traversal reaches the exact page surrogate");
         require(!focus->actionInterface(), "Muse surrogate must not acquire a second native Invoke route");
         auto page = dialog->property("currentPage").value<QQuickItem*>();
         {
@@ -273,6 +319,8 @@ int main(int argc, char** argv)
     require(completionWrites == 1, "completion is committed exactly once");
     require(testing::Mock::VerifyAndClearExpectations(configuration.get()), "configuration completion contract");
     delete dialog;
+    mainFocus.reset();
+    mainPanel.reset();
     qInfo() << "Onboarding probe: dialog destroyed";
     accessibility->deinit();
     modularity::resetAll();

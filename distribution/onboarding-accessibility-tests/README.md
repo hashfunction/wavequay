@@ -32,7 +32,9 @@ that third-page timeout; sampling placed the main thread in Qt event dispatch,
 layout polishing and text geometry with `QFontEngineBox`. Enabling fonts alone
 completed all assertions, as did registering the existing FreeSerif font under
 offscreen with both provider orders. This establishes the local fontless
-failure and correction; actual Windows confirmation still requires a fresh run.
+failure and correction. Windows run `34672540001` subsequently passed both
+provider-order tests and the missing/corrupt-font test within their unchanged
+bounds, before completing the full app build and reaching the staged GUI probe.
 
 ## Production boundary exercised
 
@@ -59,6 +61,10 @@ The assertions cover:
 
 - The popup uses the existing Muse window provider even when Qt registers its
   base-window provider later.
+- A populated main window retains its own controls and focus without placing
+  them in the popup. Child/parent/index round trips and Windows UIA's sibling
+  navigation reach the exact surrogate on every page, with hidden nodes skipped.
+- Foreign window children and out-of-range indexes are rejected.
 - The popup's actual `focusChild()` resolves every exact page/button name as an
   enabled, focused Button, reachable in its accessible tree.
 - `resetFocus()` removes the page from accessible focus lookup.
@@ -70,10 +76,22 @@ The assertions cover:
 ## Repair and observed failures
 
 The app shell registers `QQuickView`, the concrete class used by `WindowView`,
-with the getter Muse already registers for `QQuickWindow`. This prevents Qt's
-factory from taking precedence at the less-specific base class and preserves
-Muse's accessible focus route. It does not move native keyboard focus away
-from the existing dialog/navigation controls.
+with a subclass of Muse's existing `AccessibleWindowInterface`. Registration
+still requires Muse's `QQuickWindow` provider. The subclass limits child/count,
+index and focus lookup to controls belonging to the dialog's own window;
+all item providers and action/state behavior remain Muse's implementation.
+It does not move native keyboard focus away from existing navigation controls.
+
+Run `34672540001` rendered page 1 but its raw UIA popup tree contained the main
+window's List and content Group instead of onboarding controls. Muse's original
+popup provider resolves the transient parent's controller and exposes its full
+child list. Those main-window children report their own window as parent, so
+Windows UIA's parent/index-based sibling navigation escapes the popup tree.
+The earlier fixture had an empty main window and traversed child(index) directly.
+Adding actual main-window accessible controls reproduced the invalid cross-window
+child before the repair. The corrected tests preserve both views, a focused main
+control and all existing page/action assertions, and exercise UIA sibling
+navigation on the actual providers. Fresh Windows UIA confirmation remains required.
 
 The dialog also keeps `activeButtonTitle` bound to the active button. The real
 model emits `currentPageChanged` before `nextButtonTextChanged`; a one-time

@@ -100,6 +100,7 @@ endif()
 qt_add_resources(appshell appshell_resources PREFIX / FILES ${APPSHELL_COMMON_RESOURCES})
 
 target_link_libraries(appshell PRIVATE
+    muse::accessibility
     muse::ui
     muse::uicomponents
     muse::dockwindow
