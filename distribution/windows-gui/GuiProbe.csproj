@@ -12,6 +12,7 @@
     <Compile Include="ConsumerInput.cs" />
     <Compile Include="ConsumerDriver.cs" />
     <Compile Include="ConsumerProfile.cs" />
+    <Compile Include="PrivateEnvironment.cs" />
     <Compile Include="ConsumerTextReadback.cs" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />

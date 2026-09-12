@@ -190,6 +190,36 @@ class ConsumerAudioTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'not exclusively claimed'):
                 self.m.profile_inventory(self.root.parent, gui)
 
+    def test_private_desktop_uses_existing_complete_inventory_and_owned_cleanup(self):
+        private = self.root.parent / 'private-environment'
+        desktop = private / 'Desktop'
+        desktop.mkdir(parents=True)
+        token = self.claim['token']
+        marker = '.waveweft-consumer-owner'
+        (private / marker).write_text(token)
+        foreign = self.root.parent / 'Desktop'
+        foreign.mkdir()
+        sentinel = foreign / 'original.txt'
+        sentinel.write_text('retain outside the claimed private environment')
+        gui = dict(consumerProfileClaim=dict(token=token, marker=marker, paths=[str(private)], registry=[]),
+                   userStateBefore=[])
+        with patch.object(self.m, 'host_profile_roots', return_value=set()):
+            inventory = self.m.profile_inventory(self.root.parent, gui)
+        self.assertEqual(inventory[0][0], private)
+        self.assertEqual(inventory[0][1]['Desktop'], {'directory': True})
+        # A change after the complete stopped-process snapshot still blocks all deletion.
+        added = desktop / 'changed.txt'
+        added.write_text('new bytes after snapshot')
+        with self.assertRaisesRegex(ValueError, 'changed after observation'):
+            self.m.remove_snapshot(private, inventory[0][1])
+        self.assertTrue((private / marker).exists())
+        self.assertEqual(added.read_text(), 'new bytes after snapshot')
+        with patch.object(self.m, 'host_profile_roots', return_value=set()):
+            fresh = self.m.profile_inventory(self.root.parent, gui)
+        self.m.remove_snapshot(private, fresh[0][1])
+        self.assertFalse(private.exists())
+        self.assertEqual(sentinel.read_text(), 'retain outside the claimed private environment')
+
     def test_unproved_normal_close_and_foreign_process_are_rejected_before_outputs(self):
         gui = dict(sourceCommit='a' * 40, processId=12, consumerClosedNormally=True)
         base = dict(sourceCommit='a' * 40, processId=12, completed=True, errors=[], normalCloseExitCode=0, observations=[])

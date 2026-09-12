@@ -28,6 +28,7 @@ try {
     & ./distribution/windows-gui/test_display_modes.ps1
     & ./distribution/windows-gui/test_consumer_input.ps1
     & ./distribution/windows-gui/test_consumer_text_readback.ps1
+    & ./distribution/windows-gui/test_private_environment.ps1
     & ./distribution/invoke-windows-gui.ps1 -SelfTest -EvidenceDirectory (Join-Path (Get-Location) 'build-evidence/gui-helper')
     Invoke-Checked cmake @('-S','.ci-googletest','-B','build-gtest','-G','Ninja','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CXX_STANDARD=17','-Dgtest_force_shared_crt=ON','-DBUILD_GMOCK=ON',"-DCMAKE_INSTALL_PREFIX=$(Get-Location)/.ci-gtest-install")
     Invoke-Checked cmake @('--build','build-gtest','--parallel','2')

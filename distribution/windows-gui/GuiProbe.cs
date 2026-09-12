@@ -469,7 +469,10 @@ namespace WaveQuayQualification
                 foreach (var variable in env) start.EnvironmentVariables.Add(variable.Key, variable.Value);
                 foreach (string key in new[] { "USERPROFILE", "APPDATA", "LOCALAPPDATA", "TEMP" }) Directory.CreateDirectory(env[key]);
                 report["environment"] = env;
-                report["consumerProfileClaim"] = ClaimConsumerProfile(state, privateRoot);
+                var profileClaim = ClaimConsumerProfile(state, privateRoot);
+                report["consumerProfileClaim"] = profileClaim;
+                NoReparsePath(privateRoot);
+                report["privateDesktop"] = PrivateEnvironment.PrepareDesktop(privateRoot, (string)profileClaim["token"]);
                 report["executableSha256"] = Hash(executable);
                 stdout = new StreamWriter(Path.Combine(directory, "stdout.log"), false, new UTF8Encoding(false)) { AutoFlush = true };
                 stderr = new StreamWriter(Path.Combine(directory, "stderr.log"), false, new UTF8Encoding(false)) { AutoFlush = true };
