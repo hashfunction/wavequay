@@ -27,6 +27,7 @@ class OnboardingAccessibilityTests(unittest.TestCase):
             build / "Release/onboarding_accessibility_probe.exe",
             build / "onboarding_accessibility_probe.exe",
         ) if path.is_file())
+        cls.font = build / "fonts/FreeSerif.ttf"
 
     def run_probe(self, *arguments):
         environment = os.environ.copy()
@@ -49,6 +50,7 @@ class OnboardingAccessibilityTests(unittest.TestCase):
         for checkpoint in (
             "Onboarding probe: constructing QGuiApplication",
             "Onboarding probe: application constructed",
+            "Onboarding probe: fixture font registered FreeSerif",
             "Onboarding probe: QML engine constructed",
             "Onboarding probe: navigation initialized",
             "Onboarding probe: dialog component created",
@@ -60,6 +62,23 @@ class OnboardingAccessibilityTests(unittest.TestCase):
             self.assertIn(checkpoint, result.stderr, output)
         self.assertNotIn("TypeError", output)
         self.assertNotIn("ReferenceError", output)
+        self.assertNotIn("Cannot find font directory", output)
+
+    def test_missing_or_invalid_fixture_font_fails_before_qml(self):
+        original = self.font.read_bytes()
+        try:
+            for contents in (None, b"invalid font fixture"):
+                with self.subTest(missing=contents is None):
+                    if contents is None:
+                        self.font.unlink()
+                    else:
+                        self.font.write_bytes(contents)
+                    with self.assertRaisesRegex(AssertionError, "fixture font must register") as error:
+                        self.run_probe()
+                    self.assertNotIn("QML engine constructed", str(error.exception))
+                    self.assertNotIn("exceeded 30 seconds", str(error.exception))
+        finally:
+            self.font.write_bytes(original)
 
     def test_dialog_provider_and_actions_when_qt_factory_is_last(self):
         self.run_probe()

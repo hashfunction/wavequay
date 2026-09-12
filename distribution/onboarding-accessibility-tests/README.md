@@ -19,6 +19,21 @@ Both executions require every startup/teardown checkpoint on the captured
 stderr stream, including messages after Muse takes over Qt logging. Timeouts
 still fail and report all captured output.
 
+The build copies the existing Muse drawing-test `FreeSerif.ttf` into its own
+temporary font directory. Before loading QML, the probe registers that font and
+requires an actual matching font engine with usable glyphs; both the application
+and fixture theme use it. Missing or invalid font bytes must fail before QML.
+This avoids depending on the host's font database: Qt 6.11.2's Windows offscreen
+backend uses FreeType and otherwise searches the absent Qt `lib/fonts` directory.
+
+Windows run `34671040232` reached the Muse provider and verified the first two
+pages before timing out. A local Qt fontless `minimal` diagnostic reproduced
+that third-page timeout; sampling placed the main thread in Qt event dispatch,
+layout polishing and text geometry with `QFontEngineBox`. Enabling fonts alone
+completed all assertions, as did registering the existing FreeSerif font under
+offscreen with both provider orders. This establishes the local fontless
+failure and correction; actual Windows confirmation still requires a fresh run.
+
 ## Production boundary exercised
 
 The executable compiles the real `FirstLaunchSetupModel`, Muse accessible

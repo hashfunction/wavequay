@@ -3,12 +3,14 @@
 // Only external settings/interactive services and rendering/styling are substitutes.
 #include <QAccessible>
 #include <QElapsedTimer>
+#include <QFontDatabase>
 #include <QGuiApplication>
 #include <QQmlComponent>
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickView>
+#include <QRawFont>
 #include <QThread>
 #include <QDebug>
 #include <QtQuick/private/qaccessiblequickview_p.h>
@@ -124,13 +126,25 @@ int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
     qputenv("QML_DISABLE_DISK_CACHE", "1");
+    // Windows offscreen uses FreeType, not the system Windows font database.
+    // Give it the same existing source font on every host before any text layout.
+    qputenv("QT_QPA_FONTDIR", WAVEQUAY_TEST_FONTS);
     qInfo() << "Onboarding probe: constructing QGuiApplication";
     QGuiApplication app(argc, argv);
     qInfo() << "Onboarding probe: application constructed";
     auto logger = kors::logger::Logger::instance();
     logger->clearDests();
     logger->addDest(new ProbeStderrLogDest());
-    QGuiApplication::setFont(QFont("Arial"));
+    const int fontId = QFontDatabase::addApplicationFont(QStringLiteral(WAVEQUAY_TEST_FONTS "/FreeSerif.ttf"));
+    require(fontId >= 0, "offscreen fixture font must register before QML loads");
+    const QStringList fontFamilies = QFontDatabase::applicationFontFamilies(fontId);
+    require(!fontFamilies.isEmpty(), "offscreen fixture font must expose a family");
+    const QFont font(fontFamilies.front());
+    const QRawFont resolvedFont = QRawFont::fromFont(font);
+    require(resolvedFont.isValid() && resolvedFont.familyName() == fontFamilies.front()
+            && resolvedFont.supportsCharacter(QChar('A')), "offscreen fixture must resolve the registered font, without a box fallback");
+    QGuiApplication::setFont(font);
+    qInfo().noquote() << "Onboarding probe: fixture font registered" << fontFamilies.front();
     // Register early, then let Qt Quick install its own factory during startup.
     // The second process also tests the opposite initialization order.
     registry.registerInterfaceGetter("QQuickWindow", AccessibilityController::accessibleInterface);
@@ -176,7 +190,6 @@ int main(int argc, char** argv)
     QmlIoCContext iocContext(&engine); iocContext.ctx = ctx;
     engine.rootContext()->setContextProperty("ioc_context", &iocContext);
     engine.globalObject().setProperty("qsTrc", engine.evaluate("(function(context,text){return text;})"));
-    const QFont font("Arial");
     QVariantMap theme;
     for (const auto key : {"largeBodyBoldFont", "bodyFont", "iconsFont"}) theme[key] = font;
     for (const auto key : {"backgroundPrimaryColor", "fontPrimaryColor", "buttonColor", "accentColor", "strokeColor"}) theme[key] = "#ffffff";
