@@ -6,6 +6,7 @@ param([string]$Package,[string]$PackageRecord,[string]$Release,[string]$NativeIn
       [string]$SignTool,[string]$Output,[ValidateSet('qualification','store')][string]$IdentityMode='qualification',
       [switch]$LibraryOnly)
 $ErrorActionPreference='Stop';Set-StrictMode -Version Latest
+. (Join-Path $PSScriptRoot 'file-io.ps1')
 
 function Invoke-WaveWeftInstallCore([Collections.IDictionary]$Operations) {
     $normal=@('Preflight','SignCopy','Install','Consumer','Uninstall')
@@ -30,24 +31,6 @@ function Assert-WaveWeftRegistration($Candidate,$Identity,[string]$Family,[bool]
        [string]$Candidate.Version -cne '1.0.1.0' -or [string]$Candidate.Architecture -cne 'X64' -or
        [string]$Candidate.PackageFullName -cne $full -or [string]$Candidate.PackageFamilyName -cne $Family){throw 'Installed registration differs from exact selected identity'}
 }
-function Assert-WaveWeftNoRedirect([string]$Path) {
-    $item=Get-Item -LiteralPath $Path -Force
-    while($item){if($item.Attributes -band [IO.FileAttributes]::ReparsePoint){throw "Redirected path: $($item.FullName)"};$item=if($item -is [IO.DirectoryInfo]){$item.Parent}else{$item.Directory}}
-}
-function Get-WaveWeftFile([string]$Path) {
-    Assert-WaveWeftNoRedirect $Path;$item=Get-Item -LiteralPath $Path -Force
-    if($item.PSIsContainer){throw 'Expected regular file'}
-    return [ordered]@{bytes=$item.Length;sha256=(Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()}
-}
-function Assert-WaveWeftFile([string]$Path,$Expected) {
-    $actual=Get-WaveWeftFile $Path
-    if($actual.bytes -ne $Expected.bytes -or $actual.sha256 -cne $Expected.sha256){throw "File changed: $Path"}
-}
-function Write-WaveWeftJson([string]$Path,$Value) {
-    $bytes=[Text.UTF8Encoding]::new($false).GetBytes(($Value | ConvertTo-Json -Depth 100))
-    $stream=[IO.File]::Open($Path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
-    try{$stream.Write($bytes,0,$bytes.Length)}finally{$stream.Dispose()}
-}
 function Invoke-WaveWeftNative([string]$Program,[string[]]$Arguments) {& $Program @Arguments;if($LASTEXITCODE -ne 0){throw "$Program exited $LASTEXITCODE"}}
 
 function Invoke-WaveWeftInstall {
@@ -57,10 +40,12 @@ function Invoke-WaveWeftInstall {
         certificate=$null;trustAttempted=$false;installed=$null;installedByUs=$false;addCompleted=$false;
         family=$null;dataRoot=$null;dataAbsent=$false;before=@();residual=@();unsigned=$null;signed=$null;
         signTool=$null;gui=$null;flow=$null;validation=$null;cleanClose=$false;uninstalled=$false;
-        profileGone=$false;trustGone=$false;certificateGone=$false;temporaryGone=$false;unsignedUnchanged=$false}
+        profileGone=$false;trustGone=$false;certificateGone=$false;temporaryGone=$false;unsignedUnchanged=$false;runContext=$null}
     $ops=[ordered]@{}
     $ops.Preflight={
         if(-not $IsWindows -or $env:CI -cne 'true' -or $env:GITHUB_SHA -cnotmatch '^[0-9a-f]{40}$'){throw 'Requires exact-source disposable Windows CI'}
+        $runText=Invoke-WaveWeftNative python @((Join-Path $PSScriptRoot 'run_context.py'),'--source-commit',$env:GITHUB_SHA)
+        $state.runContext=$runText | ConvertFrom-Json
         foreach($path in @($Package,$PackageRecord,$Release,$NativeInput,$SignTool,$Output)){if(-not $path){throw 'All exact package/runtime/tool/output paths are required'}}
         if(Test-Path -LiteralPath $Output){throw 'Installation evidence output already exists'}
         Assert-WaveWeftNoRedirect ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Output)))
@@ -136,7 +121,7 @@ function Invoke-WaveWeftInstall {
         Write-WaveWeftJson (Join-Path $gui 'installed-profile-claim.json') ([ordered]@{schemaVersion=1;sourceCommit=$env:GITHUB_SHA;
             identityMode=$IdentityMode;packageFamilyName=$state.family;packageFullName=[string]$state.installed.PackageFullName;
             dataRoot=$state.dataRoot;preinstallDataRootAbsent=$state.dataAbsent;token=$state.token})
-        Write-WaveWeftJson (Join-Path $state.output 'installation-start.json') ([ordered]@{sourceCommit=$env:GITHUB_SHA;identityMode=$IdentityMode;
+        Write-WaveWeftJson (Join-Path $state.output 'installation-start.json') ([ordered]@{sourceCommit=$env:GITHUB_SHA;runContext=$state.runContext;identityMode=$IdentityMode;
             package_full_name=[string]$state.installed.PackageFullName;package_family_name=$state.family;install_location=[string]$state.installed.InstallLocation;
             preflight_package_full_names=@($state.before);add_completed=$state.addCompleted;installed_by_us=$state.installedByUs;
             package_data_root=$state.dataRoot;preinstall_data_root_absent=$state.dataAbsent})
@@ -222,7 +207,7 @@ function Invoke-WaveWeftInstall {
         foreach($name in @('gui-observations.json','consumer-workflow.json','consumer-validation.json','installed-profile-claim.json','display-preparation.json','watchdog.json')){
             $path=Join-Path $state.output ('gui/'+$name);if(Test-Path -LiteralPath $path){$evidence['gui/'+$name]=Get-WaveWeftFile $path}
         }
-        $result=[ordered]@{schemaVersion=1;sourceCommit=$env:GITHUB_SHA;runId=$env:GITHUB_RUN_ID;runAttempt=$env:GITHUB_RUN_ATTEMPT;
+        $result=[ordered]@{schemaVersion=1;sourceCommit=$env:GITHUB_SHA;runId=$env:GITHUB_RUN_ID;runAttempt=$env:GITHUB_RUN_ATTEMPT;runContext=$state.runContext;
             identityMode=$IdentityMode;identity=$identity;installation_qualification_passed=[bool]$core.passed;primary_error=$core.primary_error;cleanup_errors=@($core.cleanup_errors);
             add_completed=$state.addCompleted;installed_by_us=$state.installedByUs;preflight_package_full_names=@($state.before);residual_package_full_names=@($state.residual);
             package_full_name=if($state.installed){[string]$state.installed.PackageFullName}else{$null};package_family_name=$state.family;

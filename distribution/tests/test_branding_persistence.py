@@ -1,5 +1,6 @@
 """Run the actual Qt application-identity statements against a retained INI fixture."""
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -15,6 +16,9 @@ class BrandingPersistenceTests(unittest.TestCase):
         packaging = packaging[:packaging.index('# Wix-specific options')]
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory)
+            (source / 'distribution').mkdir()
+            for name in ('RecordWindowsRuntimes.cmake', 'RecordConsumedDependencies.cmake'):
+                shutil.copyfile(ROOT / 'distribution' / name, source / 'distribution' / name)
             (source / 'app-metadata.cmake').write_text(app_metadata)
             (source / 'package-metadata.cmake').write_text(packaging)
             (source / 'CMakeLists.txt').write_text(

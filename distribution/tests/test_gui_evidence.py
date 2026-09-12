@@ -71,7 +71,7 @@ class GuiEvidenceTests(unittest.TestCase):
                           for name in ('WaveWeft.exe', 'Qt6Core.dll', 'Qt6Gui.dll', 'Qt6Qml.dll', 'Qt6Quick.dll', 'qwindows.dll')]
         self.report = dict(schemaVersion=1, sourceCommit='a' * 40, stageRoot=r'D:\a\stage', systemRoot=r'C:\Windows',
                            executable=r'D:\a\stage\bin\WaveWeft.exe', executableSha256=self.inventory[0]['sha256'],
-                           processId=123, arguments=[], expectedMainWindowTitle=self.production_title, survivedUntilCleanup=True, errors=[],
+                           diagnosticAccessibilityGraph=False, processId=123, arguments=[], expectedMainWindowTitle=self.production_title, survivedUntilCleanup=True, errors=[],
                            cleanup=dict(ownedJobClosed=True, processExited=True),
                            userStateBefore=[dict(path=r'C:\Users\runner\AppData\Local\Trieflow LLC\WaveQuay', exists=False)],
                            environment={'PATH': r'D:\a\stage\bin;C:\Windows\System32;C:\Windows', 'SystemRoot': r'C:\Windows'},
@@ -96,6 +96,13 @@ class GuiEvidenceTests(unittest.TestCase):
     def reject(self):
         with self.assertRaises(ValueError):
             self.verify()
+
+    def test_graph_diagnostic_never_qualifies_even_when_workflow_passes(self):
+        for value in (True, None, 0, 'false'):
+            self.report['diagnosticAccessibilityGraph'] = value
+            with self.subTest(value=value): self.reject()
+        self.report.pop('diagnosticAccessibilityGraph')
+        self.reject()
 
     def test_complete_staged_observations_pass(self):
         try:

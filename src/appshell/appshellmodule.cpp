@@ -36,6 +36,7 @@
 #include "internal/startupscenario.h"
 #include "internal/sessionsmanager.h"
 #include "internal/dialogaccessibility.h"
+#include "internal/accessibilitygraphdiagnostics.h"
 
 #ifdef Q_OS_MAC
 #include "internal/platform/macos/macosappmenumodelhook.h"
@@ -113,6 +114,7 @@ void AppShellModule::onInit(const muse::IApplication::RunMode& mode)
     }
 
     m_appShellConfiguration->init();
+    AccessibilityGraphDiagnostics::startFromEnvironment();
 }
 
 muse::modularity::IContextSetup* AppShellModule::newContext(const muse::modularity::ContextPtr& ctx) const

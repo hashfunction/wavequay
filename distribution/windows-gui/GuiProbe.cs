@@ -423,16 +423,20 @@ namespace WaveQuayQualification
         }
         public static int Run(string stage, string directory, string sourceCommit, string expectedMainWindowTitle)
         {
-            return RunCore(stage, directory, sourceCommit, expectedMainWindowTitle, null, null, null);
+            return RunCore(stage, directory, sourceCommit, expectedMainWindowTitle, null, null, null, false);
+        }
+        public static int RunGraphDiagnostic(string stage, string directory, string sourceCommit, string expectedMainWindowTitle)
+        {
+            return RunCore(stage, directory, sourceCommit, expectedMainWindowTitle, null, null, null, true);
         }
         public static int RunInstalled(string stage, string directory, string sourceCommit, string expectedMainWindowTitle,
                                        string identityMode, string packageFullName, string packageFamily)
         {
             PackageActivation.ValidateIdentity(identityMode, packageFullName, packageFamily);
-            return RunCore(stage, directory, sourceCommit, expectedMainWindowTitle, identityMode, packageFullName, packageFamily);
+            return RunCore(stage, directory, sourceCommit, expectedMainWindowTitle, identityMode, packageFullName, packageFamily, false);
         }
         private static int RunCore(string stage, string directory, string sourceCommit, string expectedMainWindowTitle,
-                                   string identityMode, string packageFullName, string packageFamily)
+                                   string identityMode, string packageFullName, string packageFamily, bool captureGraph)
         {
             SetProcessDPIAware();
             stage = Path.GetFullPath(stage).TrimEnd(Path.DirectorySeparatorChar);
@@ -443,7 +447,7 @@ namespace WaveQuayQualification
             string reportPath = Path.Combine(directory, "gui-observations.json");
             var events = new List<Dictionary<string, object>>();
             var errors = new List<string>();
-            var report = D("schemaVersion", 1, "sourceCommit", sourceCommit, "stageRoot", stage, "systemRoot", system,
+            var report = D("diagnosticAccessibilityGraph", captureGraph, "schemaVersion", 1, "sourceCommit", sourceCommit, "stageRoot", stage, "systemRoot", system,
                 "executable", executable, "expectedMainWindowTitle", expectedMainWindowTitle, "arguments", new string[0], "events", events, "errors", errors, "survivedUntilCleanup", false,
                 "transientAutomationElements", 0, "cleanup", D("ownedJobClosed", false, "processExited", false));
             Process process = null;
@@ -485,6 +489,11 @@ namespace WaveQuayQualification
                 if(identityMode == null) report["environment"] = env;
                 var profileClaim = ClaimConsumerProfile(state, privateRoot);
                 report["consumerProfileClaim"] = profileClaim;
+                string graphPath = AccessibilityGraphCapture.Prepare(captureGraph, privateRoot, (string)profileClaim["token"], identityMode);
+                if (graphPath != null) {
+                    env.Add("WAVEWEFT_ACCESSIBILITY_GRAPH", graphPath);
+                    start.EnvironmentVariables.Add("WAVEWEFT_ACCESSIBILITY_GRAPH", graphPath);
+                }
                 NoReparsePath(privateRoot);
                 if(identityMode == null) report["privateDesktop"] = PrivateEnvironment.PrepareDesktop(privateRoot, (string)profileClaim["token"]);
                 report["executableSha256"] = Hash(executable);

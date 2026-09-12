@@ -6,11 +6,13 @@ param(
     [ValidateSet('qualification','store')][string]$IdentityMode,
     [string]$PackageFullName,
     [string]$PackageFamilyName,
+    [switch]$CaptureAccessibilityGraph,
     [switch]$SelfTest
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if (-not $IsWindows -or $env:CI -ne 'true') { throw 'Requires a disposable Windows CI runner.' }
+if($CaptureAccessibilityGraph -and ($IdentityMode -or $SelfTest)){throw 'Graph diagnostic is staged-only'}
 $EvidenceDirectory = [IO.Path]::GetFullPath($EvidenceDirectory)
 New-Item -ItemType Directory -Force $EvidenceDirectory | Out-Null
 if (-not $SelfTest) {
@@ -26,6 +28,7 @@ foreach ($argument in @('-NoProfile','-NonInteractive','-STA','-ExecutionPolicy'
     (Join-Path $PSScriptRoot 'windows-gui/observe.ps1'),'-EvidenceDirectory',$EvidenceDirectory)) {
     $start.ArgumentList.Add($argument)
 }
+if ($CaptureAccessibilityGraph) { $start.ArgumentList.Add('-CaptureAccessibilityGraph') }
 if ($SelfTest) {
     $start.ArgumentList.Add('-SelfTest')
 } else {
@@ -50,6 +53,7 @@ $timedOut = $false
 $started = $false
 $stdout = $null
 $stderr = $null
+$primaryError = $null
 try {
     if (-not $child.Start()) { throw 'Could not start Windows UIA observer.' }
     $started = $true
@@ -69,6 +73,9 @@ try {
         }
     }
     if ($child.ExitCode -ne 0) { throw "GUI observer exited $($child.ExitCode); inspect retained evidence." }
+} catch {
+    $primaryError = $_
+    throw
 } finally {
     if ($started) {
         if (-not $child.HasExited) { $child.Kill($true); $child.WaitForExit() }
@@ -84,8 +91,17 @@ try {
         # after the owned helper/process tree is stopped, even when it failed.
         & python (Join-Path $PSScriptRoot 'collect_application_logs.py') --report (Join-Path $EvidenceDirectory 'gui-observations.json')
         if ($LASTEXITCODE -ne 0) { Write-Warning 'Application log capture was incomplete; inspect application-logs.json.' }
+        if ($CaptureAccessibilityGraph) {
+            try {
+                & python (Join-Path $PSScriptRoot 'collect_accessibility_graph.py') --report (Join-Path $EvidenceDirectory 'gui-observations.json')
+                if ($LASTEXITCODE -ne 0) { Write-Warning 'Graph capture failed; original GUI error and graph metadata retained.' }
+            } catch { Write-Warning 'Graph capture could not run; original GUI failure preserved.' }
+        }
         & python (Join-Path $PSScriptRoot 'consumer_audio.py') finalize --evidence $EvidenceDirectory --source-commit $SourceCommit
-        if ($LASTEXITCODE -ne 0) { throw 'Consumer file/profile validation or owned cleanup failed; inspect consumer-validation.json.' }
+        if ($LASTEXITCODE -ne 0) {
+            if ($primaryError) { Write-Warning 'Consumer validation/cleanup also failed; inspect consumer-validation.json. Original GUI failure preserved.' }
+            else { throw 'Consumer file/profile validation or owned cleanup failed; inspect consumer-validation.json.' }
+        }
     }
 }
 

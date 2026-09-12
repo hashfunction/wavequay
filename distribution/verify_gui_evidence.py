@@ -142,6 +142,7 @@ def verify_installed_launch(report, installed):
 
 
 def verify(report, inventory, evidence_dir, expected_commit, *, installed=None):
+    require(report.get("diagnosticAccessibilityGraph") is False, "Graph diagnostics cannot qualify a product")
     expected_title = load_expected_title()
     verify_display(evidence_dir, expected_commit)
     require(report.get('expectedMainWindowTitle') == expected_title, 'Observer used a different expected title')

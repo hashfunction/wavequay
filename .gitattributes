@@ -15,3 +15,9 @@
 
 # Preserve exact upstream dependency patch bytes and patch context whitespace.
 distribution/recipes/portaudio/patch/*.patch -text whitespace=-blank-at-eol
+
+# Original preferred-source/license bytes are hashed and packaged unchanged.
+distribution/corresponding-source/notices/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+distribution/corresponding-source/source-inputs.json -text
+distribution/corresponding-source/publication/** -text
+distribution/corresponding-source/microsoft-notices/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab

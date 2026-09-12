@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="GuiProbe.cs" />
+    <Compile Include="AccessibilityGraphCapture.cs" />
     <Compile Include="OnboardingInput.cs" />
     <Compile Include="ConsumerInput.cs" />
     <Compile Include="ConsumerDriver.cs" />

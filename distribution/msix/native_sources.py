@@ -165,7 +165,27 @@ def main():
         parser.add_argument('--' + name, required=True, type=Path)
     parser.add_argument('--source-commit', required=True)
     args = parser.parse_args()
+    from run_context import current
+    run = current(args.source_commit)
     record = collect(*(getattr(args, field).absolute() for field in ('root', 'build', 'stage', 'qt')), args.source_commit)
+    record['runContext'] = run
+    # The command-line release collector always observes the original Qt
+    # archives. The lower-level consumed-prefix collector remains useful for
+    # separately testing unresolved ownership without inventing Qt metadata.
+    from qt_native_proof import collect_and_retain as collect_qt
+    tool = shutil.which('cmake')
+    require(tool, 'Original Qt archive comparison requires the configured CMake tool')
+    retained = args.output.absolute().parent / 'native-source' / 'qt'
+    record['qtOriginalArchives'] = collect_qt(args.root.absolute(), args.qt.absolute(), record['payload'], Path(tool).resolve(), retained)
+    from platform_native_proof import collect as collect_mesa
+    record['mesaOriginalArchive'] = collect_mesa(args.root.absolute(), record['payload'], Path(tool).resolve())
+    from windows_runtime_proof import collect as collect_windows
+    record['windowsRuntimeOrigins'] = collect_windows(args.build.absolute() / 'waveweft-windows-runtimes.json',
+        args.output.absolute().parent / 'windows-runtime-origins.json', record['payload'], args.source_commit, run)
+    record['openItems'] = [item for item in record['openItems']
+                           if item != 'Qt original archive/member/SBOM/source/notices and Microsoft redistribution records pending']
+    record['openItems'].append('Qt/Mesa original native archives and Microsoft origin observations verified; complete preferred-source/notice delivery and Microsoft terms gate pending')
+    require(inventory_tree(args.stage.absolute()) == record['payload'], 'Current stage changed during original native observations')
     with args.output.open('x', encoding='utf-8') as output:
         json.dump(record, output, indent=2); output.write('\n')
 

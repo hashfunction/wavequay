@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "product": "WaveWeft",
+  "scope": "Unchanged original preferred-source archives and provenance catalog; no native application binary or completed Windows qualification is claimed.",
+  "release_tag": "native-sources-2026-09-12-waveweft",
+  "source_catalog": {
+    "filename": "source-inputs.json",
+    "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/source-inputs.json",
+    "bytes": 323064,
+    "sha256": "acf71b51b4cd06ab1ee3f453fa579aa72eb7099ec8939f74744e1f74787084ef"
+  },
+  "archives": [
+    {
+      "component": "expat",
+      "subdir": "expat",
+      "filename": "expat-2.7.1-src.tar.xz",
+      "origin": "https://github.com/libexpat/libexpat/releases/download/R_2_7_1/expat-2.7.1.tar.xz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/expat-2.7.1-src.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/expat-2.7.1-src.tar.xz",
+      "bytes": 496108,
+      "sha256": "354552544b8f99012e5062f7d570ec77f14b412a3ff5c7d8d0dae62c0d217c30"
+    },
+    {
+      "component": "flac",
+      "subdir": "flac",
+      "filename": "flac-1.4.3-src.tar.xz",
+      "origin": "https://github.com/xiph/flac/releases/download/1.4.3/flac-1.4.3.tar.xz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/flac-1.4.3-src.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/flac-1.4.3-src.tar.xz",
+      "bytes": 1006728,
+      "sha256": "6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70"
+    },
+    {
+      "component": "freetype",
+      "subdir": "freetype",
+      "filename": "freetype-2.14.1-src.tar.xz",
+      "origin": "https://download.savannah.gnu.org/releases/freetype/freetype-2.14.1.tar.xz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/freetype-2.14.1-src.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/freetype-2.14.1-src.tar.xz",
+      "bytes": 2664948,
+      "sha256": "32427e8c471ac095853212a37aef816c60b42052d4d9e48230bab3bdf2936ccc"
+    },
+    {
+      "component": "harfbuzz",
+      "subdir": "harfbuzz",
+      "filename": "harfbuzz-12.3.0-src.tar.xz",
+      "origin": "https://github.com/harfbuzz/harfbuzz/releases/download/12.3.0/harfbuzz-12.3.0.tar.xz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/harfbuzz-12.3.0-src.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/harfbuzz-12.3.0-src.tar.xz",
+      "bytes": 18580220,
+      "sha256": "8660ebd3c27d9407fc8433b5d172bafba5f0317cb0bb4339f28e5370c93d42b7"
+    },
+    {
+      "component": "lame",
+      "subdir": "lame",
+      "filename": "lame-3.100-src.tar.gz",
+      "origin": "https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/lame-3.100-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/lame-3.100-src.tar.gz",
+      "bytes": 1524133,
+      "sha256": "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e"
+    },
+    {
+      "component": "libpng",
+      "subdir": "libpng",
+      "filename": "libpng-1.6.50-src.tar.xz",
+      "origin": "https://download.sourceforge.net/libpng/libpng-1.6.50.tar.xz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/libpng-1.6.50-src.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/libpng-1.6.50-src.tar.xz",
+      "bytes": 1060992,
+      "sha256": "4df396518620a7aa3651443e87d1b2862e4e88cad135a8b93423e01706232307"
+    },
+    {
+      "component": "libsndfile",
+      "subdir": "libsndfile",
+      "filename": "libsndfile-1.2.2-src.tar.xz",
+      "origin": "https://github.com/libsndfile/libsndfile/releases/download/1.2.2/libsndfile-1.2.2.tar.xz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/libsndfile-1.2.2-src.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/libsndfile-1.2.2-src.tar.xz",
+      "bytes": 730760,
+      "sha256": "3799ca9924d3125038880367bf1468e53a1b7e3686a934f098b7e1d286cdb80e"
+    },
+    {
+      "component": "loop-tempo-estimator",
+      "subdir": "loop-tempo-estimator",
+      "filename": "loop-tempo-estimator-0.0.4-src.tar.gz",
+      "origin": "https://github.com/saintmatthieu/loop-tempo-estimator/releases/download/v0.0.4/loop-tempo-estimator-v0.0.4.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/loop-tempo-estimator-0.0.4-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/loop-tempo-estimator-0.0.4-src.tar.gz",
+      "bytes": 32036,
+      "sha256": "bf1e157b16bdffa48562a084e8447a2ab2f5d9b85dd791849b3603b90eed3db7"
+    },
+    {
+      "component": "mpg123",
+      "subdir": "mpg123",
+      "filename": "mpg123-1.32.10-src.tar.bz2",
+      "origin": "https://www.mpg123.de/download/mpg123-1.32.10.tar.bz2",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/mpg123-1.32.10-src.tar.bz2",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/mpg123-1.32.10-src.tar.bz2",
+      "bytes": 1118315,
+      "sha256": "87b2c17fe0c979d3ef38eeceff6362b35b28ac8589fbf1854b5be75c9ab6557c"
+    },
+    {
+      "component": "nyquist",
+      "subdir": "nyquist",
+      "filename": "nyquist-r331-src.zip",
+      "origin": "https://sourceforge.net/code-snapshots/svn/n/ny/nyquist/code/nyquist-code-r331-trunk.zip",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/nyquist-r331-src.zip",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/nyquist-r331-src.zip",
+      "bytes": 37255436,
+      "sha256": "94bb10ec5189e07a0dc15d8e382aaa468cb0e33dce893633432931fea0113885"
+    },
+    {
+      "component": "ogg",
+      "subdir": "ogg",
+      "filename": "ogg-1.3.5-src.tar.gz",
+      "origin": "https://github.com/xiph/ogg/releases/download/v1.3.5/libogg-1.3.5.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/ogg-1.3.5-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/ogg-1.3.5-src.tar.gz",
+      "bytes": 593071,
+      "sha256": "0eb4b4b9420a0f51db142ba3f9c64b333f826532dc0f48c6410ae51f4799b664"
+    },
+    {
+      "component": "opus",
+      "subdir": "opus",
+      "filename": "opus-1.5.2-src.tar.gz",
+      "origin": "https://github.com/xiph/opus/releases/download/v1.5.2/opus-1.5.2.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/opus-1.5.2-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/opus-1.5.2-src.tar.gz",
+      "bytes": 7839412,
+      "sha256": "65c1d2f78b9f2fb20082c38cbe47c951ad5839345876e46941612ee87f9a7ce1"
+    },
+    {
+      "component": "opusfile",
+      "subdir": "opusfile",
+      "filename": "opusfile-0.12-src.tar.gz",
+      "origin": "https://github.com/xiph/opusfile/archive/v0.12.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/opusfile-0.12-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/opusfile-0.12-src.tar.gz",
+      "bytes": 145424,
+      "sha256": "a20a1dff1cdf0719d1e995112915e9966debf1470ee26bb31b2f510ccf00ef40"
+    },
+    {
+      "component": "pffft",
+      "subdir": "pffft",
+      "filename": "pffft-0979688-src.tar.gz",
+      "origin": "https://bitbucket.org/jpommier/pffft/get/09796885cd5b.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/pffft-0979688-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/pffft-0979688-src.tar.gz",
+      "bytes": 47122,
+      "sha256": "fdc80563de8c31d6380886bc1ba0ffb897abde58611707ac94eb8ed8ab850cbb"
+    },
+    {
+      "component": "picojson",
+      "subdir": "picojson",
+      "filename": "picojson-111c9be-src.tar.gz",
+      "origin": "https://github.com/kazuho/picojson/archive/111c9be5188f7350c2eac9ddaedd8cca3d7bf394.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/picojson-111c9be-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/picojson-111c9be-src.tar.gz",
+      "bytes": 16772,
+      "sha256": "671f89832a17e9e71398f80c0a326afa2ebe81f4c26d5a9992e1fcd0888ae151"
+    },
+    {
+      "component": "portaudio",
+      "subdir": "portaudio",
+      "filename": "portaudio-19.7.0-src.tar.gz",
+      "origin": "https://github.com/PortAudio/portaudio/archive/refs/tags/v19.7.0.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/portaudio-19.7.0-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/portaudio-19.7.0-src.tar.gz",
+      "bytes": 1462961,
+      "sha256": "5af29ba58bbdbb7bbcefaaecc77ec8fc413f0db6f4c4e286c40c3e1b83174fa0"
+    },
+    {
+      "component": "pugixml",
+      "subdir": "pugixml",
+      "filename": "pugixml-1.15-src.tar.gz",
+      "origin": "https://github.com/zeux/pugixml/releases/download/v1.15/pugixml-1.15.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/pugixml-1.15-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/pugixml-1.15-src.tar.gz",
+      "bytes": 395045,
+      "sha256": "655ade57fa703fb421c2eb9a0113b5064bddb145d415dd1f88c79353d90d511a"
+    },
+    {
+      "component": "qt5compat",
+      "subdir": "qt5compat",
+      "filename": "qt5compat-everywhere-src-6.11.2.tar.xz",
+      "origin": "https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qt5compat-everywhere-src-6.11.2.tar.xz",
+      "previous_public_url": "https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qt5compat-everywhere-src-6.11.2.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/qt5compat-everywhere-src-6.11.2.tar.xz",
+      "bytes": 14620928,
+      "sha256": "68c320fe3391096a9f2d870170edf1b67dac8af1d0e51c0c9e5343807f114287"
+    },
+    {
+      "component": "qtdeclarative",
+      "subdir": "qtdeclarative",
+      "filename": "qtdeclarative-everywhere-src-6.11.2.tar.xz",
+      "origin": "https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtdeclarative-everywhere-src-6.11.2.tar.xz",
+      "previous_public_url": "https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtdeclarative-everywhere-src-6.11.2.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/qtdeclarative-everywhere-src-6.11.2.tar.xz",
+      "bytes": 38780392,
+      "sha256": "215b7b70517e380123eabc6b92243f3c47b6f016a91d126057dbe53551c6b430"
+    },
+    {
+      "component": "qtshadertools",
+      "subdir": "qtshadertools",
+      "filename": "qtshadertools-everywhere-src-6.11.2.tar.xz",
+      "origin": "https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtshadertools-everywhere-src-6.11.2.tar.xz",
+      "previous_public_url": "https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtshadertools-everywhere-src-6.11.2.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/qtshadertools-everywhere-src-6.11.2.tar.xz",
+      "bytes": 1216816,
+      "sha256": "805046b8b7757665586890b375940047e874ae3ab00adb6d3f2b38fc6b200b1c"
+    },
+    {
+      "component": "rapidjson",
+      "subdir": "rapidjson",
+      "filename": "rapidjson-24b5e7a-src.tar.gz",
+      "origin": "https://github.com/Tencent/rapidjson/archive/24b5e7a8b27f42fa16b96fc70aade9106cf7102f.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/rapidjson-24b5e7a-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/rapidjson-24b5e7a-src.tar.gz",
+      "bytes": 1116703,
+      "sha256": "2d2601a82d2d3b7e143a3c8d43ef616671391034bc46891a9816b79cf2d3e7a8"
+    },
+    {
+      "component": "sbsms",
+      "subdir": "sbsms",
+      "filename": "sbsms-2.2.0-src.tar.gz",
+      "origin": "https://github.com/claytonotey/libsbsms/archive/refs/tags/2.2.0.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/sbsms-2.2.0-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/sbsms-2.2.0-src.tar.gz",
+      "bytes": 459968,
+      "sha256": "29dee2bbce0e6f841bc0153b90677f1ac8b2665b320fbe248b014d21e7140e6c"
+    },
+    {
+      "component": "soundtouch",
+      "subdir": "soundtouch",
+      "filename": "soundtouch-1.7.1-src.tar.gz",
+      "origin": "https://www.surina.net/soundtouch/soundtouch-1.7.1.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/soundtouch-1.7.1-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/soundtouch-1.7.1-src.tar.gz",
+      "bytes": 101274,
+      "sha256": "385eafa438a9d31ddf84b8d2f713097a3f1fc93d7abdb2fc54c484b777ee0267"
+    },
+    {
+      "component": "soxr",
+      "subdir": "soxr",
+      "filename": "soxr-0.1.3-src.tar.xz",
+      "origin": "https://downloads.sourceforge.net/project/soxr/soxr-0.1.3-Source.tar.xz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/soxr-0.1.3-src.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/soxr-0.1.3-src.tar.xz",
+      "bytes": 94384,
+      "sha256": "b111c15fdc8c029989330ff559184198c161100a59312f5dc19ddeb9b5a15889"
+    },
+    {
+      "component": "sqlite",
+      "subdir": "sqlite",
+      "filename": "sqlite-3.50.4-src.zip",
+      "origin": "https://sqlite.org/2025/sqlite-amalgamation-3500400.zip",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/sqlite-3.50.4-src.zip",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/sqlite-3.50.4-src.zip",
+      "bytes": 2845716,
+      "sha256": "1d3049dd0f830a025a53105fc79fd2ab9431aea99e137809d064d8ee8356b032"
+    },
+    {
+      "component": "tft",
+      "subdir": "tft",
+      "filename": "tft-0.5-src.tar.gz",
+      "origin": "https://github.com/kgramhans/tft/archive/1d96301673ebc05fa09a7bd505eacd82ee0fea33.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/tft-0.5-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/tft-0.5-src.tar.gz",
+      "bytes": 41099,
+      "sha256": "97049161956685d5c6e475734b9b3c547639a73a04431b2d5fb755317fafee44"
+    },
+    {
+      "component": "twolame",
+      "subdir": "twolame",
+      "filename": "twolame-0.3.13-src.tar.gz",
+      "origin": "https://downloads.sourceforge.net/project/twolame/twolame/0.3.13/twolame-0.3.13.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/twolame-0.3.13-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/twolame-0.3.13-src.tar.gz",
+      "bytes": 660415,
+      "sha256": "98f332f48951f47f23f70fd0379463aff7d7fb26f07e1e24e42ddef22cc6112a"
+    },
+    {
+      "component": "utfcpp",
+      "subdir": "utfcpp",
+      "filename": "utfcpp-4.1.1-src.tar.gz",
+      "origin": "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.1.1.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/utfcpp-4.1.1-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/utfcpp-4.1.1-src.tar.gz",
+      "bytes": 36846,
+      "sha256": "1ca68016f0abc24172998e39ce0d8f8e2b7a26f7579a0ff85d4e1b9a7aea56f8"
+    },
+    {
+      "component": "vorbis",
+      "subdir": "vorbis",
+      "filename": "vorbis-1.3.7-src.tar.gz",
+      "origin": "https://github.com/xiph/vorbis/releases/download/v1.3.7/libvorbis-1.3.7.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/vorbis-1.3.7-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/vorbis-1.3.7-src.tar.gz",
+      "bytes": 1658963,
+      "sha256": "0e982409a9c3fc82ee06e08205b1355e5c6aa4c36bca58146ef399621b0ce5ab"
+    },
+    {
+      "component": "vst3sdk",
+      "subdir": "base",
+      "filename": "vst3sdk-base-src.tar.gz",
+      "origin": "https://github.com/steinbergmedia/vst3_base/archive/f0998e7b8424b32ba275cf4218aa56beef29821c.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/vst3sdk-base-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/vst3sdk-base-src.tar.gz",
+      "bytes": 64636,
+      "sha256": "5460f4d09bc65fbbc23315c6900dda33eb96a7a3f1720d1d7387592a69bc24ef"
+    },
+    {
+      "component": "vst3sdk",
+      "subdir": "pluginterfaces",
+      "filename": "vst3sdk-pluginterfaces-src.tar.gz",
+      "origin": "https://github.com/steinbergmedia/vst3_pluginterfaces/archive/151ecde4d6ee1c457dcce848342b162461944fe6.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/vst3sdk-pluginterfaces-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/vst3sdk-pluginterfaces-src.tar.gz",
+      "bytes": 106805,
+      "sha256": "e7bb5dc1701c2c136d0902d458533ef0fa9cf720c088f176659d017780ffda3a"
+    },
+    {
+      "component": "vst3sdk",
+      "subdir": "public.sdk",
+      "filename": "vst3sdk-public.sdk-src.tar.gz",
+      "origin": "https://github.com/steinbergmedia/vst3_public_sdk/archive/3fce096d6ee575479753f1aab23033d2e2ffdc6e.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/vst3sdk-public.sdk-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/vst3sdk-public.sdk-src.tar.gz",
+      "bytes": 12717631,
+      "sha256": "2915be92fa70eda43b99ee492957b9334ae7cc6156f26f25bda952fc34248408"
+    },
+    {
+      "component": "wavpack",
+      "subdir": "wavpack",
+      "filename": "wavpack-5.7.0-src.tar.xz",
+      "origin": "https://github.com/dbry/WavPack/releases/download/5.7.0/wavpack-5.7.0.tar.xz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/wavpack-5.7.0-src.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/wavpack-5.7.0-src.tar.xz",
+      "bytes": 814324,
+      "sha256": "e81510fd9ec5f309f58d5de83e9af6c95e267a13753d7e0bbfe7b91273a88bee"
+    },
+    {
+      "component": "wxwidgets",
+      "subdir": "wxwidgets",
+      "filename": "wxwidgets-3.2.6-src.tar.bz2",
+      "origin": "https://github.com/wxWidgets/wxWidgets/releases/download/v3.2.6/wxWidgets-3.2.6.tar.bz2",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/wxwidgets-3.2.6-src.tar.bz2",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/wxwidgets-3.2.6-src.tar.bz2",
+      "bytes": 27528560,
+      "sha256": "939e5b77ddc5b6092d1d7d29491fe67010a2433cf9b9c0d841ee4d04acb9dce7"
+    },
+    {
+      "component": "yasm",
+      "subdir": "yasm",
+      "filename": "yasm-1.3.0-src.tar.gz",
+      "origin": "https://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/yasm-1.3.0-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/yasm-1.3.0-src.tar.gz",
+      "bytes": 1492156,
+      "sha256": "3dce6601b495f5b3d45b59f7d2492a340ee7e84b5beca17e48f862502bd5603f"
+    },
+    {
+      "component": "zlib",
+      "subdir": "zlib",
+      "filename": "zlib-1.3.1-src.tar.gz",
+      "origin": "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz",
+      "previous_public_url": "https://github.com/musescore/muse_deps/releases/download/deps-20260715-093446/zlib-1.3.1-src.tar.gz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/zlib-1.3.1-src.tar.gz",
+      "bytes": 1512791,
+      "sha256": "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"
+    },
+    {
+      "component": "qtbase",
+      "subdir": "qtbase",
+      "filename": "qtbase-everywhere-src-6.11.2.tar.xz",
+      "origin": "https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtbase-everywhere-src-6.11.2.tar.xz",
+      "previous_public_url": "https://github.com/hashfunction/twinquay/releases/download/native-sources-2026-09-12/qtbase-everywhere-src-6.11.2.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/qtbase-everywhere-src-6.11.2.tar.xz",
+      "bytes": 50582668,
+      "sha256": "5b2e00eccaf5a4d8c14134ffa0ea8dfd0a35ae1ffc7f8d87fa4305a1ed23cf22"
+    },
+    {
+      "component": "qtsvg",
+      "subdir": "qtsvg",
+      "filename": "qtsvg-everywhere-src-6.11.2.tar.xz",
+      "origin": "https://download.qt.io/archive/qt/6.11/6.11.2/submodules/qtsvg-everywhere-src-6.11.2.tar.xz",
+      "previous_public_url": "https://github.com/hashfunction/twinquay/releases/download/native-sources-2026-09-12/qtsvg-everywhere-src-6.11.2.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/qtsvg-everywhere-src-6.11.2.tar.xz",
+      "bytes": 2341860,
+      "sha256": "d594337feca84c26fb67fe87b85e6a5c12fda404b611d905f9d138210c311876"
+    },
+    {
+      "component": "Mesa",
+      "subdir": "Mesa",
+      "filename": "mesa-11.2.2.tar.xz",
+      "origin": "https://archive.mesa3d.org/older-versions/11.x/11.2.2/mesa-11.2.2.tar.xz",
+      "previous_public_url": "https://github.com/hashfunction/twinquay/releases/download/native-sources-2026-09-12/mesa-11.2.2.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/mesa-11.2.2.tar.xz",
+      "bytes": 7860932,
+      "sha256": "40e148812388ec7c6d7b6657d5a16e2e8dabba8b97ddfceea5197947647bdfb4"
+    },
+    {
+      "component": "LLVM",
+      "subdir": "LLVM",
+      "filename": "llvm-3.6.2.src.tar.xz",
+      "origin": "https://releases.llvm.org/3.6.2/llvm-3.6.2.src.tar.xz",
+      "previous_public_url": "https://github.com/hashfunction/twinquay/releases/download/native-sources-2026-09-12/llvm-3.6.2.src.tar.xz",
+      "url": "https://github.com/hashfunction/wavequay/releases/download/native-sources-2026-09-12-waveweft/llvm-3.6.2.src.tar.xz",
+      "bytes": 12802380,
+      "sha256": "f60dc158bfda6822de167e87275848969f0558b3134892ff54fced87e4667b94"
+    }
+  ]
+}

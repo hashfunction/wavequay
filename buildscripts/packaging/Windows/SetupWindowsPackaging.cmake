@@ -5,6 +5,10 @@ if(NOT OS_IS_WIN)
 endif()
 
 include(InstallRequiredSystemLibraries)
+if(AU_TRIEFLOW_DISTRIBUTION)
+    include("${PROJECT_SOURCE_DIR}/distribution/RecordWindowsRuntimes.cmake")
+    waveweft_record_windows_runtimes()
+endif()
 
 set(CPACK_PACKAGE_NAME ${MUSE_APP_NAME})
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Audacity is a digital audio editor")

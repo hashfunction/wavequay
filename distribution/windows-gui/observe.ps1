@@ -8,6 +8,7 @@ param(
     [ValidateSet('qualification','store')][string]$IdentityMode,
     [string]$PackageFullName,
     [string]$PackageFamilyName,
+    [switch]$CaptureAccessibilityGraph,
     [switch]$SelfTest
 )
 $ErrorActionPreference = 'Stop'
@@ -22,7 +23,7 @@ try {
         [System.Windows.Automation.AutomationElement].Assembly.Location,
         [System.Windows.Automation.ControlType].Assembly.Location,
         [System.Windows.Rect].Assembly.Location)
-    $sources = @('GuiProbe.cs','OnboardingInput.cs','ConsumerInput.cs','ConsumerDriver.cs','ConsumerProfile.cs','PrivateEnvironment.cs','PackageActivation.cs','ConsumerTextReadback.cs','ConsumerTreeRead.cs') | ForEach-Object { Join-Path $PSScriptRoot $_ }
+    $sources = @('GuiProbe.cs','OnboardingInput.cs','ConsumerInput.cs','ConsumerDriver.cs','ConsumerProfile.cs','PrivateEnvironment.cs','PackageActivation.cs','ConsumerTextReadback.cs','ConsumerTreeRead.cs','AccessibilityGraphCapture.cs') | ForEach-Object { Join-Path $PSScriptRoot $_ }
     if ($SelfTest) { $sources += Join-Path $PSScriptRoot 'ConsumerTreeReadTests.cs' }
     Add-Type -Path $sources -ReferencedAssemblies $references
     if ($SelfTest) {
@@ -35,10 +36,12 @@ try {
         exit 0
     }
     if (-not $Stage -or -not $ExpectedMainWindowTitle -or $SourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Expected an exact stage and source commit.' }
+    if($CaptureAccessibilityGraph -and ($IdentityMode -or $SelfTest)){throw 'Graph diagnostic is staged-only'}
     if($IdentityMode) {
         exit ([WaveQuayQualification.GuiProbe]::RunInstalled($Stage,$EvidenceDirectory,$SourceCommit,$ExpectedMainWindowTitle,$IdentityMode,$PackageFullName,$PackageFamilyName))
     }
     if($PackageFullName -or $PackageFamilyName){throw 'Installed identity requires explicit installed mode'}
+    if($CaptureAccessibilityGraph){exit ([WaveQuayQualification.GuiProbe]::RunGraphDiagnostic($Stage,$EvidenceDirectory,$SourceCommit,$ExpectedMainWindowTitle))}
     exit ([WaveQuayQualification.GuiProbe]::Run($Stage, $EvidenceDirectory, $SourceCommit, $ExpectedMainWindowTitle))
 } catch {
     $_ | Out-String | Set-Content -Encoding UTF8 (Join-Path $EvidenceDirectory 'helper-error.log')

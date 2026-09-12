@@ -17,6 +17,7 @@ import tempfile
 from package import (identity_for_mode, package_name, expected_payload, stage_payload,
                      verify_msix, verify_unpacked, verify_installed, inventory_tree, file_record)
 from files import _regular_stream, _reject_link, _write_new
+from run_context import current as current_run, validate as validate_run
 
 SDK = '10.0.26100.0'
 
@@ -34,7 +35,8 @@ def source_inputs(root):
              'SetupConfigure.cmake', 'buildscripts/ci/windows/wavequay-release.cmake',
              'muse_deps/prebuilt.lock', 'distribution/consumer_audio.py', 'distribution/verify_gui_evidence.py',
              'distribution/invoke-windows-gui.ps1', 'distribution/qualify-windows.ps1',
-             'distribution/RecordConsumedDependencies.cmake', 'distribution/branding/waveweft.png']
+             'distribution/RecordConsumedDependencies.cmake', 'distribution/RecordWindowsRuntimes.cmake',
+             'buildscripts/packaging/Windows/SetupWindowsPackaging.cmake', 'distribution/branding/waveweft.png']
     for base in ('distribution/msix', 'distribution/windows-gui', 'distribution/recipes/portaudio'):
         for path in sorted((root / base).rglob('*')):
             if path.is_file() and '__pycache__' not in path.parts and path.suffix in ('.py', '.ps1', '.cs', '.txt', '.cmake', '.patch'):
@@ -47,9 +49,11 @@ def context(release, root, native, source_commit, mode):
         raise ValueError('Exact source revision required')
     measured = inventory_tree(release)
     inputs = load(native)
+    run = current_run(source_commit)
+    validate_run(inputs.get('runContext'), run)
     if inputs.get('schemaVersion') != 1 or inputs.get('sourceCommit') != source_commit or inputs.get('payload') != measured:
         raise ValueError('Current stage differs from same-source native input inventory')
-    return dict(schemaVersion=1, sourceCommit=source_commit, identityMode=mode, identity=identity_for_mode(mode),
+    return dict(schemaVersion=1, sourceCommit=source_commit, runContext=run, identityMode=mode, identity=identity_for_mode(mode),
                 qualificationIdentityOnly=mode == 'qualification', storeIdentityUsed=mode == 'store',
                 signed=False, publicRelease=False, licenseClearanceClaimed=False, installationQualificationPassed=False,
                 sourceInputs=source_inputs(root), nativeInput=file_record(native), release=measured,
@@ -107,6 +111,7 @@ def build_package(release, root, native, source_commit, makeappx, output, mode='
 def verify_record(package, record_path, release, root, native, source_commit, mode='qualification'):
     record = load(record_path)
     expected = context(release, root, native, source_commit, mode)
+    validate_run(record.get('runContext'), expected['runContext'])
     if any(record.get(k) != v for k, v in expected.items()):
         raise ValueError('Package record differs from independently regenerated current inputs')
     for name in ('qualificationIdentityOnly', 'storeIdentityUsed'):

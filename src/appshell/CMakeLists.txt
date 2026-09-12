@@ -40,6 +40,8 @@ target_sources(appshell PRIVATE
     internal/isessionsmanager.h
     internal/sessionsmanager.cpp
     internal/sessionsmanager.h
+    internal/accessibilitygraphdiagnostics.cpp
+    internal/accessibilitygraphdiagnostics.h
 
     internal/splashscreen/splashscreen.cpp
     internal/splashscreen/splashscreen.h

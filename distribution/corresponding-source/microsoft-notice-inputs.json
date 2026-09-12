@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "product": "WaveWeft",
+  "scope": "Microsoft runtime components only; does not relicense application or open-source components",
+  "retrievedAtUtc": "2026-09-12T15:43:03.421619+00:00",
+  "documents": {
+    "Visual-Studio-2022-Enterprise-Professional-License-EN.docx": {
+      "url": "https://visualstudio.microsoft.com/wp-content/uploads/2021/11/Visual-Studio-2022-Enterprise-Professional-License-EN.docx",
+      "bytes": 63513,
+      "sha256": "9c0cd52b20db9d081854c75bd1b50c75514b8f8cb09c8cad15e89d90b97b5bf3"
+    },
+    "Windows-SDK-license.md": {
+      "url": "https://learn.microsoft.com/en-us/legal/windows-sdk/license?accept=text/markdown",
+      "bytes": 29470,
+      "sha256": "0b0f3f06e59fbf03e9b18e9688a90366ea26d9f95c3d82b302f97b1680b1199b"
+    },
+    "Windows-SDK-redist.md": {
+      "url": "https://learn.microsoft.com/en-us/legal/windows-sdk/redist?accept=text/markdown",
+      "bytes": 19214,
+      "sha256": "ff4dc82936ef9e8449927a3d06ee1fca801933c1464ceee60fa14003eb656dd0"
+    },
+    "Visual-Studio-2022-redist.md": {
+      "url": "https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution?accept=text/markdown",
+      "bytes": 24763,
+      "sha256": "0240b9a75f8fd997d998af27ea84b901f576782177f8ff535b7b07924c9570f7"
+    },
+    "Visual-C-Runtime-2015-2022-License-1.docx": {
+      "url": "https://visualstudio.microsoft.com/wp-content/uploads/2021/09/Visual-C-Runtime-2015-2022-License-1.docx",
+      "bytes": 39644,
+      "sha256": "f1e3d56ceb2ad68aae0711b910375009e651ac5530fa0760f0dea6e81e54fae1",
+      "retainedOriginalFrom": "TwinQuay original build evidence, exact unchanged Microsoft document"
+    }
+  },
+  "owners": {
+    "Microsoft.VC143.CRT": {
+      "files": [
+        "bin/msvcp140.dll",
+        "bin/msvcp140_1.dll",
+        "bin/msvcp140_2.dll",
+        "bin/msvcp140_atomic_wait.dll",
+        "bin/msvcp140_codecvt_ids.dll",
+        "bin/vcruntime140.dll",
+        "bin/vcruntime140_1.dll",
+        "bin/concrt140.dll"
+      ],
+      "documents": [
+        "Visual-C-Runtime-2015-2022-License-1.docx",
+        "Visual-Studio-2022-Enterprise-Professional-License-EN.docx",
+        "Visual-Studio-2022-redist.md"
+      ]
+    },
+    "Microsoft.WindowsSDK.D3D": {
+      "files": [
+        "bin/d3dcompiler_47.dll"
+      ],
+      "documents": [
+        "Windows-SDK-license.md",
+        "Windows-SDK-redist.md"
+      ]
+    }
+  }
+}

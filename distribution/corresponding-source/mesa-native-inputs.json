@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "owner": "Mesa",
+  "version": "11.2.2",
+  "compilerSource": "LLVM/LLVM",
+  "binaryArchive": {
+    "filename": "opengl32sw-64-mesa_11_2_2-signed_sha256.7z",
+    "url": "https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_6112/qt6_6112_msvc2022_64/qt.qt6.6112.win64_msvc2022_64/6.11.2-0-202608131017opengl32sw-64-mesa_11_2_2-signed_sha256.7z",
+    "bytes": 5474526,
+    "sha256": "59a086716cfd4bdec035698d501ba45526f8d2ecb5c0c428a356d8be0b5d2c79"
+  },
+  "nativeFile": {
+    "path": "bin/opengl32sw.dll",
+    "member": "opengl32sw.dll",
+    "bytes": 20639888,
+    "sha256": "b04de4541863bc7d8879040a78889c4849c1b1da2784c4630f734c146c2998ce"
+  }
+}

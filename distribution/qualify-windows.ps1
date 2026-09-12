@@ -1,3 +1,4 @@
+param([switch]$CaptureAccessibilityGraph)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if (-not $IsWindows -or $env:CI -ne 'true') { throw 'Requires a disposable Windows CI runner.' }
@@ -6,6 +7,18 @@ New-Item -ItemType Directory -Force build-evidence | Out-Null
 function Invoke-Checked([string]$Program, [string[]]$Arguments) {
     & $Program @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Program exited $LASTEXITCODE" }
+}
+function Invoke-WaveProvenanceObservation([scriptblock]$Action, [hashtable]$Result, [bool]$Diagnostic, [string]$Step) {
+    try { & $Action }
+    catch {
+        if (-not $Diagnostic) { throw }
+        if ($Result.diagnosticProvenanceErrors.Count -ge 8) { throw }
+        $original=$_.Exception.ToString()
+        $Result.diagnosticProvenanceErrors += @{
+            step=$Step; exception=$original.Substring(0,[Math]::Min(8192,$original.Length)); truncated=($original.Length -gt 8192)
+        }
+        Write-Warning "Provenance observation failed ($Step); retained separately for this rejected diagnostic run."
+    }
 }
 $expectedPins = @{ muse='3c5512eb8ee1a863a6123e62bd75a6ab55045752'; muse_deps='b915e6703a2a9839b2a98d4ca2468a88e361929f'; '.ci-googletest'='063de7e9578f82b369302001269680b4b1553359' }
 foreach ($path in $expectedPins.Keys) {
@@ -19,7 +32,7 @@ qmake -query | Set-Content build-evidence/qt.txt
 $env:EXTDEPS_CACHE = Join-Path (Get-Location) '.ci-dependency-cache'
 $sourceCommit = (git rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Cannot identify exact source revision.' }
-$result = @{ source_commit=$sourceCommit; built=$false; native_recipe_tests=$false; staged=$false;
+$result = @{ diagnosticAccessibilityGraph=[bool]$CaptureAccessibilityGraph; diagnosticProvenanceErrors=@(); source_commit=$sourceCommit; built=$false; native_recipe_tests=$false; staged=$false;
     windows_main_window_verified=$false; windows_local_file_workflow_verified=$false; audio_device_tests=$false; native_export_tests=$false;
     source_license_closure=$false; submitted=$false }
 try {
@@ -31,8 +44,10 @@ try {
     & ./distribution/windows-gui/test_consumer_text_readback.ps1
     & ./distribution/windows-gui/test_consumer_tree_read.ps1
     & ./distribution/windows-gui/test_private_environment.ps1
+    & ./distribution/windows-gui/test_accessibility_graph.ps1
     & ./distribution/windows-gui/test_package_activation.ps1
     & ./distribution/msix/test_install.ps1
+    & ./distribution/msix/test_windows_runtimes.ps1
     & ./distribution/invoke-windows-gui.ps1 -SelfTest -EvidenceDirectory (Join-Path (Get-Location) 'build-evidence/gui-helper')
     Invoke-Checked cmake @('-S','.ci-googletest','-B','build-gtest','-G','Ninja','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CXX_STANDARD=17','-Dgtest_force_shared_crt=ON','-DBUILD_GMOCK=ON',"-DCMAKE_INSTALL_PREFIX=$(Get-Location)/.ci-gtest-install")
     Invoke-Checked cmake @('--build','build-gtest','--parallel','2')
@@ -52,12 +67,20 @@ try {
         @{ path=[IO.Path]::GetRelativePath((Join-Path (Get-Location) 'stage'), $_.FullName); bytes=$_.Length; sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash }
     } | ConvertTo-Json -Depth 3 | Set-Content build-evidence/stage-inventory.json
     Copy-Item build/waveweft-consumed-dependencies.json build-evidence/
-    $qtPrefix=(& qmake -query QT_INSTALL_PREFIX).Trim()
-    if($LASTEXITCODE -ne 0 -or -not $qtPrefix){throw 'Cannot resolve the actual Qt installation for provenance'}
-    Invoke-Checked python @('distribution/msix/native_sources.py','--root',(Get-Location).Path,'--build',(Join-Path (Get-Location) 'build'),
-        '--stage',(Join-Path (Get-Location) 'stage'),'--qt',$qtPrefix,'--source-commit',$sourceCommit,'--output','build-evidence/native-inputs.json')
-    $result | ConvertTo-Json | Set-Content build-evidence/result.json
-    & ./distribution/invoke-windows-gui.ps1 -SourceCommit $sourceCommit
+    Copy-Item build/waveweft-windows-runtimes.json build-evidence/
+    Invoke-WaveProvenanceObservation -Result $result -Diagnostic ([bool]$CaptureAccessibilityGraph) -Step 'windows-runtime-origins' -Action {
+        & ./distribution/msix/windows-runtimes.ps1 -Configuration 'build/waveweft-windows-runtimes.json' `
+            -Stage (Join-Path (Get-Location) 'stage') -Output 'build-evidence/windows-runtime-origins.json' -SourceCommit $sourceCommit
+    }
+    Invoke-WaveProvenanceObservation -Result $result -Diagnostic ([bool]$CaptureAccessibilityGraph) -Step 'native-source-inputs' -Action {
+        $qtPrefix=(& qmake -query QT_INSTALL_PREFIX).Trim()
+        if($LASTEXITCODE -ne 0 -or -not $qtPrefix){throw 'Cannot resolve the actual Qt installation for provenance'}
+        Invoke-Checked python @('distribution/msix/native_sources.py','--root',(Get-Location).Path,'--build',(Join-Path (Get-Location) 'build'),
+            '--stage',(Join-Path (Get-Location) 'stage'),'--qt',$qtPrefix,'--source-commit',$sourceCommit,'--output','build-evidence/native-inputs.json')
+    }
+    $result | ConvertTo-Json -Depth 8 | Set-Content build-evidence/result.json
+    & ./distribution/invoke-windows-gui.ps1 -SourceCommit $sourceCommit -CaptureAccessibilityGraph:$CaptureAccessibilityGraph
+    if($CaptureAccessibilityGraph){throw 'Diagnostic observation completed; qualification is intentionally unavailable'}
     Invoke-Checked python @('distribution/verify_gui_evidence.py','--report','build-evidence/gui/gui-observations.json',
         '--inventory','build-evidence/stage-inventory.json','--source-commit',$sourceCommit)
     $result.windows_main_window_verified = $true
@@ -67,7 +90,7 @@ try {
     }
     $result.windows_local_file_workflow_verified = $true
 } finally {
-    $result | ConvertTo-Json | Set-Content build-evidence/result.json
+    $result | ConvertTo-Json -Depth 8 | Set-Content build-evidence/result.json
     Get-ChildItem .qt-archives,.ci-dependency-cache -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in @('.zip','.7z','.gz','.xz','.bz2','.zst','.tar') } | ForEach-Object {
         @{ path=[IO.Path]::GetRelativePath((Get-Location).Path, $_.FullName); bytes=$_.Length; sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash }
     } | ConvertTo-Json -Depth 3 | Set-Content build-evidence/dependency-downloads.json

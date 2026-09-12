@@ -435,6 +435,7 @@ def finalize(output, source_commit):
                     recipes.append((candidate, validate_recipe(json.loads(candidate.read_text(encoding='utf-8')))))
             require(len(recipes) == 1, 'Expected one recipe in a profile proved absent before launch')
             result['recipe'] = dict(path=str(recipes[0][0]), **digest(recipes[0][0]), settings=recipes[0][1])
+            require(gui.get('diagnosticAccessibilityGraph') is not True, 'Graph diagnostic cannot confer consumer qualification')
             result['verified'] = True
         except (OSError, ValueError, KeyError, TypeError) as error:
             result['errors'].append(str(error))

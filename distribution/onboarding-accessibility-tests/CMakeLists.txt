@@ -30,6 +30,7 @@ set(MUSE_MODULE_MULTIWINDOWS OFF)
 configure_file("${MUSE}/cmake/muse_framework_config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/muse_framework_config.h")
 add_executable(onboarding_accessibility_probe
     onboarding_accessibility_probe.cpp
+    "${WAVEQUAY_ROOT}/src/appshell/internal/accessibilitygraphdiagnostics.cpp"
     "${WAVEQUAY_ROOT}/src/appshell/qml/Audacity/AppShell/FirstLaunchSetup/firstlaunchsetupmodel.cpp"
     ${KORS_LOGGER_SRC} ${KORS_PROFILER_SRC} ${KORS_ASYNC_SRC}
     "${THIRDPARTY}/kors_modularity/modularity/ioc.cpp"

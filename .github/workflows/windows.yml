@@ -1,6 +1,11 @@
 name: WaveWeft Windows qualification
 on:
   workflow_dispatch:
+    inputs:
+      capture_accessibility_graph:
+        description: "Read-only bounded Qt/Muse graph; never product qualification"
+        type: boolean
+        default: false
   push:
     branches: [codex/wavequay]
 permissions:
@@ -34,7 +39,9 @@ jobs:
           arch: x64
       - name: Qualify offline native app and recipes
         shell: pwsh
-        run: ./distribution/qualify-windows.ps1
+        env:
+          WAVEWEFT_CAPTURE_ACCESSIBILITY_GRAPH: ${{ inputs.capture_accessibility_graph || false }}
+        run: ./distribution/qualify-windows.ps1 -CaptureAccessibilityGraph:($env:WAVEWEFT_CAPTURE_ACCESSIBILITY_GRAPH -ceq 'true')
       - name: Preserve metadata, UI trees, screenshots and diagnostics (no native binaries)
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -47,8 +54,11 @@ jobs:
             build-evidence/gui/*.json
             build-evidence/gui/*.png
             build-evidence/gui/*.log
+            build-evidence/gui/accessibility-graph.jsonl
             build-evidence/gui-helper/*.json
             build-evidence/gui-helper/*.log
+            build-evidence/native-source/qt/sbom/*.json
+            build-evidence/native-source/qt/sbom/*.spdx
             build/CMakeCache.txt
             build/CMakeFiles/CMakeConfigureLog.yaml
             build-recipe-tests/Testing/Temporary/LastTest.log

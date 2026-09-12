@@ -79,6 +79,10 @@ static void require(bool condition, const char* message)
 {
     if (!condition) { qCritical().noquote() << "FAIL:" << message; std::exit(1); }
 }
+
+static bool waitUntil(const std::function<bool()>& condition);
+#include "accessibility_graph_tests.h"
+
 static void process()
 {
     async::processMessages();
@@ -287,6 +291,7 @@ int main(int argc, char** argv)
             "main editor controls and focus must remain reachable by Windows UIA sibling traversal");
     if (app.arguments().contains("--application-window")) qInfo() << "ApplicationWindow Muse provider and editor traversal passed";
     qInfo() << "Muse QQuickView provider selected; Qt" << qVersion();
+    graphDiagnosticTests(windowInterface);
     auto model = qmlObject(dialog, "model");
     auto next = qobject_cast<QQuickItem*>(qmlObject(dialog, "nextStepButton"));
     require(model && next, "production model and Next identities resolve");
