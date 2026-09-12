@@ -103,6 +103,49 @@ class GuiEvidenceTests(unittest.TestCase):
         except ValueError as error:
             self.fail(f'Rejected actual configured title {self.production_title!r}: {error}')
 
+    def installed_fixture(self):
+        family = '1659hashfunction.WaveQuay_r3hxytd7jt6c4'
+        full = '1659hashfunction.WaveQuay_1.0.1.0_x64__r3hxytd7jt6c4'
+        location = 'C:\\Program Files\\WindowsApps\\' + full
+        profile = 'C:\\Users\\runner\\AppData\\Local\\Packages\\' + family
+        self.report.pop('environment')
+        self.report['stageRoot'] = location
+        self.report['executable'] = location + r'\bin\WaveWeft.exe'
+        for module in self.report['modules']:
+            module['path'] = module['path'].replace(r'D:\a\stage', location)
+        self.report['startedUtc'] = '2026-09-12T10:00:00.0200000Z'
+        self.report['installedLaunch'] = dict(identityMode='store', packageFullName=full, packageFamilyName=family,
+            aumid=family+'!WaveQuay', activationUtc='2026-09-12T10:00:00.0100000Z', processPackageFullName=full,
+            preexistingProcessIds=[1, 2, 3], brokerEnvironmentUnmodified=True, packageDataRoot=profile)
+        return dict(sourceCommit='a' * 40, identityMode='store', package_full_name=full, package_family_name=family,
+                    install_location=location, preflight_package_full_names=[], add_completed=True, installed_by_us=True,
+                    package_data_root=profile, preinstall_data_root_absent=True)
+
+    def test_installed_evidence_requires_package_origin_and_cannot_be_stage(self):
+        self.assertTrue(hasattr(self.module, 'verify_installed_launch'), 'Installed GUI evidence boundary is absent')
+        installed = self.installed_fixture()
+        self.module.verify(self.report, self.inventory, self.directory, 'a' * 40, installed=installed)
+        with self.assertRaises(ValueError): self.verify()
+        original = copy.deepcopy(self.report)
+        for field, value in (('processPackageFullName', 'foreign'), ('identityMode', 'qualification'),
+                             ('aumid', self.report['installedLaunch']['packageFamilyName']+'!WaveWeft'),
+                             ('brokerEnvironmentUnmodified', False), ('preexistingProcessIds', [123]),
+                             ('activationUtc', '2026-09-12T10:00:01Z')):
+            self.report = copy.deepcopy(original)
+            self.report['installedLaunch'][field] = value
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                self.module.verify(self.report, self.inventory, self.directory, 'a' * 40, installed=installed)
+        self.report = copy.deepcopy(original)
+        self.report['environment'] = {'PATH': 'fictional broker environment'}
+        with self.assertRaises(ValueError):
+            self.module.verify(self.report, self.inventory, self.directory, 'a' * 40, installed=installed)
+        self.report = copy.deepcopy(original)
+        for field, value in (('add_completed', False), ('installed_by_us', False), ('preflight_package_full_names', ['foreign']),
+                             ('preinstall_data_root_absent', False), ('sourceCommit', 'b' * 40)):
+            bad = copy.deepcopy(installed); bad[field] = value
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                self.module.verify(self.report, self.inventory, self.directory, 'a' * 40, installed=bad)
+
     def test_exact_contextual_add_track_button_passes_with_plain_text_panel(self):
         for event in self.report['events'][3:]:
             event['tree'] = [self.node('Playback toolbar', 'Text'), self.node('Add track', 'Text'),

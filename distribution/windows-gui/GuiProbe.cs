@@ -423,6 +423,17 @@ namespace WaveQuayQualification
         }
         public static int Run(string stage, string directory, string sourceCommit, string expectedMainWindowTitle)
         {
+            return RunCore(stage, directory, sourceCommit, expectedMainWindowTitle, null, null, null);
+        }
+        public static int RunInstalled(string stage, string directory, string sourceCommit, string expectedMainWindowTitle,
+                                       string identityMode, string packageFullName, string packageFamily)
+        {
+            PackageActivation.ValidateIdentity(identityMode, packageFullName, packageFamily);
+            return RunCore(stage, directory, sourceCommit, expectedMainWindowTitle, identityMode, packageFullName, packageFamily);
+        }
+        private static int RunCore(string stage, string directory, string sourceCommit, string expectedMainWindowTitle,
+                                   string identityMode, string packageFullName, string packageFamily)
+        {
             SetProcessDPIAware();
             stage = Path.GetFullPath(stage).TrimEnd(Path.DirectorySeparatorChar);
             directory = Path.GetFullPath(directory);
@@ -468,25 +479,40 @@ namespace WaveQuayQualification
                 };
                 foreach (var variable in env) start.EnvironmentVariables.Add(variable.Key, variable.Value);
                 foreach (string key in new[] { "USERPROFILE", "APPDATA", "LOCALAPPDATA", "TEMP" }) Directory.CreateDirectory(env[key]);
-                report["environment"] = env;
+                // Broker activation uses normal Windows package environment.
+                // These private directories remain solely an owned fixture root;
+                // they are never represented as the installed app's environment.
+                if(identityMode == null) report["environment"] = env;
                 var profileClaim = ClaimConsumerProfile(state, privateRoot);
                 report["consumerProfileClaim"] = profileClaim;
                 NoReparsePath(privateRoot);
-                report["privateDesktop"] = PrivateEnvironment.PrepareDesktop(privateRoot, (string)profileClaim["token"]);
+                if(identityMode == null) report["privateDesktop"] = PrivateEnvironment.PrepareDesktop(privateRoot, (string)profileClaim["token"]);
                 report["executableSha256"] = Hash(executable);
+                job = new OwnedJob();
+                if(identityMode != null)
+                {
+                    DateTime activated; int[] before;
+                    process = PackageActivation.Start(identityMode, packageFullName, packageFamily, executable, out activated, out before);
+                    report["installedLaunch"] = D("identityMode", identityMode, "packageFullName", packageFullName,
+                        "packageFamilyName", packageFamily, "aumid", packageFamily+"!WaveQuay", "activationUtc", activated.ToString("o"),
+                        "processPackageFullName", PackageActivation.FullName(process), "preexistingProcessIds", before,
+                        "brokerEnvironmentUnmodified", true, "packageDataRoot", Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Packages", packageFamily));
+                }
+                else
+                {
                 stdout = new StreamWriter(Path.Combine(directory, "stdout.log"), false, new UTF8Encoding(false)) { AutoFlush = true };
                 stderr = new StreamWriter(Path.Combine(directory, "stderr.log"), false, new UTF8Encoding(false)) { AutoFlush = true };
                 process = new Process { StartInfo = start };
                 process.OutputDataReceived += (sender, e) => { if (e.Data != null) stdout.WriteLine(e.Data); };
                 process.ErrorDataReceived += (sender, e) => { if (e.Data != null) stderr.WriteLine(e.Data); };
-                job = new OwnedJob();
                 if (!process.Start()) throw new IOException("Process.Start failed");
+                }
                 report["processId"] = process.Id;
                 // Assign before any UI work. If assignment fails, finally kills this
                 // exact Process handle; no process-name based cleanup is used.
                 job.Assign(process);
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
+                if(identityMode == null) { process.BeginOutputReadLine(); process.BeginErrorReadLine(); }
                 report["startedUtc"] = process.StartTime.ToUniversalTime().ToString("o");
                 Save(reportPath, report);
                 int page = 0;

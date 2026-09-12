@@ -310,6 +310,96 @@ namespace WaveQuayQualification
             }
             private void Shortcut(params ushort[] keys)
             { var root=Main();SetForegroundWindow(main);Keys(root,null,keys); }
+            private object MenuFocusFacts()
+            {
+                // Diagnostic observation only: a pointer action never asserts
+                // that a non-activating popup owns keyboard/UIA focus.
+                try {
+                    uint pid;uint thread=GetWindowThreadProcessId(main,out pid);
+                    var info=new ConsumerThreadInfo{Size=(uint)Marshal.SizeOf(typeof(ConsumerThreadInfo))};
+                    bool available=GetGUIThreadInfo(thread,ref info);var focus=AutomationElement.FocusedElement;
+                    return D("nativeAvailable",available,"foreground",GetForegroundWindow().ToInt64(),
+                        "active",info.Active.ToInt64(),"nativeFocus",info.Focus.ToInt64(),
+                        "uia",focus==null?null:D("pid",focus.Current.ProcessId,"name",focus.Current.Name,
+                            "role",focus.Current.ControlType.ProgrammaticName,"identity",Identity(focus),
+                            "enabled",focus.Current.IsEnabled,"offscreen",focus.Current.IsOffscreen));
+                } catch(Exception error) { return D("diagnosticError",error.Message); }
+            }
+            private bool InNearestMenuWindow(AutomationElement root,AutomationElement target)
+            {
+                var cursor=target;
+                for(int depth=0;cursor!=null && depth<12;depth++,cursor=TreeWalker.RawViewWalker.GetParent(cursor))
+                {
+                    // A submenu may also occur under its parent's raw tree.
+                    // Bind the item only to its nearest native Window, never
+                    // count it once for each ancestor popup.
+                    if(cursor.Current.ControlType==ControlType.Window && cursor.Current.NativeWindowHandle!=0)
+                        return Identity(cursor)==Identity(root);
+                }
+                return false;
+            }
+            private List<Tuple<AutomationElement,AutomationElement>> MenuMatches(string name)
+            {
+                var found=new List<Tuple<AutomationElement,AutomationElement>>();
+                foreach(var window in VisibleWindows())
+                {
+                    var c=window.Current;
+                    if(c.ControlType!=ControlType.Window || c.ClassName!="QQuickView"
+                        || c.AutomationId!="muse::accessibility::AccessibleAppRootObject.MenuView_WindowView_QQuickView")continue;
+                    foreach(var target in Match(window,name,ControlType.MenuItem,false))
+                        if(InNearestMenuWindow(window,target))found.Add(Tuple.Create(window,target));
+                }
+                return found;
+            }
+            private ConsumerMenuSnapshot MenuSnapshot(AutomationElement root,AutomationElement target,string name)
+            {
+                var owners=new List<ConsumerMenuOwner>();var window=new IntPtr(root.Current.NativeWindowHandle);
+                for(int depth=0;window!=IntPtr.Zero && depth<12;depth++)
+                {
+                    var owner=GetWindow(window,4);owners.Add(new ConsumerMenuOwner{window=window.ToInt64(),owner=owner.ToInt64(),pid=NativePid(window)});
+                    if(window==main)break;window=owner;
+                }
+                bool contained=InNearestMenuWindow(root,target);
+                return new ConsumerMenuSnapshot{target=Snapshot(root,target,MenuMatches(name).Count),mainPid=NativePid(main),
+                    mainTitle=Main().Current.Name,mainBounds=NativeBounds(main),popupIdentity=Identity(root),
+                    popupRole=root.Current.ControlType.ProgrammaticName.Replace("ControlType.",""),popupClass=root.Current.ClassName,
+                    popupAutomationId=root.Current.AutomationId,popupEnabled=root.Current.IsEnabled && IsWindowEnabled(new IntPtr(root.Current.NativeWindowHandle)),
+                    popupVisible=!root.Current.IsOffscreen && IsWindowVisible(new IntPtr(root.Current.NativeWindowHandle)),targetInPopup=contained,owners=owners.ToArray()};
+            }
+            private void PointAtMenu(string name,bool hover)
+            {
+                var wait=Stopwatch.StartNew();Tuple<AutomationElement,AutomationElement> choice=null;
+                while(wait.ElapsedMilliseconds<10000)
+                {
+                    Check();var matches=MenuMatches(name);Require(matches.Count<=1,"Duplicate exact owned menu target: "+name);
+                    if(matches.Count==1){choice=matches[0];break;}Thread.Sleep(150);
+                }
+                Require(choice!=null,"Exact visible effect menu target absent: "+name);
+                var root=choice.Item1;var target=choice.Item2;var focusBefore=MenuFocusFacts();var before=MenuSnapshot(root,target,name);
+                var attempt=D("name",name,"hoverOnly",hover,"before",before,"focusBefore",focusBefore);
+                report["lastMenuPointerAttempt"]=attempt;
+                ConsumerInput.Menu(before,name,process.Id,main.ToInt64());
+                Require(SetCursorPos(before.target.point[0],before.target.point[1]),"Cannot position effect menu pointer");
+                attempt["focusFinal"]=MenuFocusFacts();var final=MenuSnapshot(root,target,name);attempt["final"]=final;
+                ConsumerInput.MenuStable(before,final,name,process.Id,main.ToInt64());
+                NativePoint pointer;Require(GetCursorPos(out pointer) && pointer.X==before.target.point[0] && pointer.Y==before.target.point[1],"Effect menu pointer moved");
+                if(hover)
+                {
+                    // StyledMenuItem.onHovered opens Special. Clicking after
+                    // its hover has opened the submenu would toggle it closed.
+                    inputs.Add(D("action",action,"kind","menu-hover","before",before,"final",final,"positioned",true));Write();return;
+                }
+                var mouse=new[]{new Input{Type=0,Value=new InputUnion{Mouse=new MouseInput{Flags=2}}},new Input{Type=0,Value=new InputUnion{Mouse=new MouseInput{Flags=4}}}};
+                uint sent=SendInput(2,mouse,Marshal.SizeOf(typeof(Input)));
+                inputs.Add(D("action",action,"kind","menu-click","before",before,"final",final,"sent",sent));Write();
+                if(sent==1)
+                {
+                    try{ConsumerInput.MenuStable(final,MenuSnapshot(root,target,name),name,process.Id,main.ToInt64());
+                        report["partialMenuMouseReleaseSent"]=SendInput(1,new[]{mouse[1]},Marshal.SizeOf(typeof(Input)));}
+                    catch(Exception error){report["partialMenuMouseReleaseRefused"]=error.Message;}
+                }
+                Require(sent==2,"Partial effect menu click");Thread.Sleep(180);
+            }
             private void FocusedChoice(AutomationElement root,string desired,ControlType role,ushort accept)
             {
                 var ready=Stopwatch.StartNew();
@@ -384,7 +474,7 @@ namespace WaveQuayQualification
                     Click(Main(),"Clip: Dawn-thread",ControlType.Button);
                     Observe("imported",Main());
                     action="reverse-selected-audio";Shortcut(0x11,0x41);var root=Main();Click(root,"Effect",ControlType.Button);
-                    FocusedChoice(root,"Special Menu",ControlType.MenuItem,0x27);FocusedChoice(root,"Reverse",ControlType.MenuItem,0x0D);
+                    PointAtMenu("Special Menu",true);PointAtMenu("Reverse",false);
                     Observe("reversed",Main());
                     action="save-local-project";Shortcut(0x11,0x53);root=Window("Save project",false);
                     if(root.Current.ClassName!="#32770")Click(root,"On your computer",ControlType.Button);
@@ -407,6 +497,7 @@ namespace WaveQuayQualification
                 catch(Exception error)
                 {
                     ((List<string>)report["errors"]).Add(error.ToString());
+                    report["failureFocus"]=MenuFocusFacts();
                     if(!process.HasExited)
                     {
                         try

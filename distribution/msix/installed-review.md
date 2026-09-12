@@ -1,0 +1,20 @@
+# WaveWeft installed qualification review
+
+Base: `9f1e5588ca91eae75314f30b022518ac41e36f4a`. This second chunk implements SDK construction and two separate installed consumer lifecycles. Workflow dispatch/export wiring and corresponding-source clearance remain subsequent work; no actual Windows installation is claimed by these local fixtures.
+
+The original Windows job log for run 34691748383 (`/private/tmp/waveweft-34691748383-job.log`, job 103548104168) confirms the configure-time collector's real prefix: Flac bundles from `build/_deps/flac/bin` at line 1180; PortAudio configures from its retained source and two owned patches and installs under `build/_deps/portaudio` at lines 1188–1257. The collector now hashes only consumed native paths, original notices, and Qt native/SBOM inputs. It still calls this resolved-prefix evidence, keeps unknown owners, and explicitly refuses source/license closure pending archive-member and source-delivery comparison.
+
+`build_package.py` binds each fixed-mode package to the current clean Git revision, pinned Muse/MuseDeps revisions, selected source files, full native input, current staged bytes, generated artwork/manifest and exact Windows SDK tool. It builds and independently verifies the unsigned ZIP and SDK-unpacked payload. It rejects stale inputs, changed tools, mode confusion, integer substitutes for boolean flags and all signing inputs through the existing exact payload rules.
+
+The installer refuses pre-existing same-name registrations and package data. It signs only a temporary copy with an owned non-exportable certificate, verifies the exact registration and complete installed payload, and activates through `IApplicationActivationManager`. The retained process handle must identify the exact package, family, executable and new lifetime. A separate registration receipt is required by the GUI verifier; staged observations cannot satisfy it. Both modes reuse the existing onboarding and full UI consumer/audio/project/recipe oracle. The original input, module, close, display, job and host-profile cleanup remain in force.
+
+Broker activation uses the normal environment. No private environment is asserted for that process. The existing initially absent host profile claims remain; a separately marked, initially absent package data root is inventoried after process shutdown. Only the exact package uninstall may remove it. Any retained package data fails qualification and is preserved. The final install receipt references the original full JSON files by byte hash rather than rewriting nested timestamps through PowerShell. Certificate trust, personal certificate/private key, temporary files, registration and untouched unsigned package all have explicit cleanup predicates.
+
+Local validation on macOS:
+
+- Full distribution Python suite: 91 tests passed in 78.330 seconds (`/private/tmp/waveweft-installed-tests.log`).
+- A subsequent production regression reproduced acceptance of integer mode flags; exact boolean enforcement fixes it. The focused SDK builder test passed both modes, wrong flags, changed tool and changed stage cases after that change.
+- All seven PowerShell fixtures passed: onboarding input, display, native text readback, consumer input, private environment, fixed package activation/lifetime, and 10 installation/failure-sequencing plus 9 registration-ownership cases. Native API branches remain Windows-only.
+- Full .NET Framework 4.8 observer compiled with zero warnings/errors; all distribution PowerShell parsed; `git diff --check` passed.
+
+The SDK fixture uses an injected small ZIP-producing runner; it does not claim MakeAppx ran on macOS. Actual native family derivation, broker activation, profile virtualization, package uninstall and both complete consumer lifecycles require a fresh Windows run. `qualify-packages.ps1` is ready but not yet wired to the workflow. Every source/public release flag remains false until the separate source and unsigned-export gates are implemented and independently reviewed.

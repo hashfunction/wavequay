@@ -27,8 +27,11 @@ try {
     & ./distribution/windows-gui/test_onboarding_input.ps1
     & ./distribution/windows-gui/test_display_modes.ps1
     & ./distribution/windows-gui/test_consumer_input.ps1
+    & ./distribution/windows-gui/test_consumer_menu.ps1
     & ./distribution/windows-gui/test_consumer_text_readback.ps1
     & ./distribution/windows-gui/test_private_environment.ps1
+    & ./distribution/windows-gui/test_package_activation.ps1
+    & ./distribution/msix/test_install.ps1
     & ./distribution/invoke-windows-gui.ps1 -SelfTest -EvidenceDirectory (Join-Path (Get-Location) 'build-evidence/gui-helper')
     Invoke-Checked cmake @('-S','.ci-googletest','-B','build-gtest','-G','Ninja','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CXX_STANDARD=17','-Dgtest_force_shared_crt=ON','-DBUILD_GMOCK=ON',"-DCMAKE_INSTALL_PREFIX=$(Get-Location)/.ci-gtest-install")
     Invoke-Checked cmake @('--build','build-gtest','--parallel','2')
@@ -47,6 +50,11 @@ try {
     Get-ChildItem stage -Recurse -File | ForEach-Object {
         @{ path=[IO.Path]::GetRelativePath((Join-Path (Get-Location) 'stage'), $_.FullName); bytes=$_.Length; sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash }
     } | ConvertTo-Json -Depth 3 | Set-Content build-evidence/stage-inventory.json
+    Copy-Item build/waveweft-consumed-dependencies.json build-evidence/
+    $qtPrefix=(& qmake -query QT_INSTALL_PREFIX).Trim()
+    if($LASTEXITCODE -ne 0 -or -not $qtPrefix){throw 'Cannot resolve the actual Qt installation for provenance'}
+    Invoke-Checked python @('distribution/msix/native_sources.py','--root',(Get-Location).Path,'--build',(Join-Path (Get-Location) 'build'),
+        '--stage',(Join-Path (Get-Location) 'stage'),'--qt',$qtPrefix,'--source-commit',$sourceCommit,'--output','build-evidence/native-inputs.json')
     $result | ConvertTo-Json | Set-Content build-evidence/result.json
     & ./distribution/invoke-windows-gui.ps1 -SourceCommit $sourceCommit
     Invoke-Checked python @('distribution/verify_gui_evidence.py','--report','build-evidence/gui/gui-observations.json',

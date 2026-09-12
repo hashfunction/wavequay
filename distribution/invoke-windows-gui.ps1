@@ -3,6 +3,9 @@ param(
     [string]$Stage = (Join-Path (Split-Path $PSScriptRoot -Parent) 'stage'),
     [string]$EvidenceDirectory = (Join-Path (Split-Path $PSScriptRoot -Parent) 'build-evidence/gui'),
     [string]$SourceCommit,
+    [ValidateSet('qualification','store')][string]$IdentityMode,
+    [string]$PackageFullName,
+    [string]$PackageFamilyName,
     [switch]$SelfTest
 )
 $ErrorActionPreference = 'Stop'
@@ -31,6 +34,12 @@ if ($SelfTest) {
     if ([string]::IsNullOrWhiteSpace($expectedTitle) -or $expectedTitle -match '[\r\n]') { throw 'Invalid configured main-window title.' }
     foreach ($argument in @('-Stage',[IO.Path]::GetFullPath($Stage),'-SourceCommit',$SourceCommit,
         '-ExpectedMainWindowTitle',$expectedTitle)) { $start.ArgumentList.Add($argument) }
+    if($IdentityMode) {
+        foreach($argument in @('-IdentityMode',$IdentityMode,'-PackageFullName',$PackageFullName,'-PackageFamilyName',$PackageFamilyName)) {
+            if(-not $argument){throw 'Installed observer requires complete package identity'}
+            $start.ArgumentList.Add($argument)
+        }
+    } elseif($PackageFullName -or $PackageFamilyName){throw 'Installed observer identity requires explicit mode'}
 }
 . (Join-Path $PSScriptRoot 'windows-gui/display-modes.ps1')
 $observe = {

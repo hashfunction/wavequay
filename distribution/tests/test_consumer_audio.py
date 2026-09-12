@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Independent file-policy fixtures; these are never product UI evidence."""
 import importlib.util
+import copy
 from contextlib import closing
 import json
 from pathlib import Path
@@ -135,6 +136,30 @@ class ConsumerAudioTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Invalid saved project'):
             self.m.validate_project(path)
 
+    def test_installed_profile_read_requires_fixed_family_absent_before_and_owner(self):
+        self.assertTrue(hasattr(self.m, 'package_profile_inventory'), 'Installed package profile observation is absent')
+        output = self.root.parent
+        profile = output / 'package-data'; profile.mkdir()
+        token = '11111111-1111-4111-8111-111111111111'
+        marker = profile / '.waveweft-msix-owner'; marker.write_text(token)
+        (profile / 'LocalCache').mkdir(); (profile / 'LocalCache/actual.txt').write_text('actual app data')
+        family = '1659hashfunction.WaveQuay_r3hxytd7jt6c4'
+        full = '1659hashfunction.WaveQuay_1.0.1.0_x64__r3hxytd7jt6c4'
+        claim = dict(schemaVersion=1, sourceCommit='a' * 40, identityMode='store', packageFamilyName=family,
+                     packageFullName=full, dataRoot=str(profile), preinstallDataRootAbsent=True, token=token)
+        path = output / 'installed-profile-claim.json'; path.write_text(json.dumps(claim))
+        gui = dict(sourceCommit='a' * 40, installedLaunch=dict(identityMode='store', packageFamilyName=family,
+                   packageFullName=full, packageDataRoot=str(profile)))
+        with patch.object(self.m, 'package_data_root', return_value=profile):
+            observed = self.m.package_profile_inventory(output, gui)
+            self.assertEqual(observed[0][0], profile)
+            self.assertEqual(observed[0][1]['LocalCache/actual.txt'], self.m.digest(profile / 'LocalCache/actual.txt'))
+            claim['preinstallDataRootAbsent'] = False; path.write_text(json.dumps(claim))
+            with self.assertRaises(ValueError): self.m.package_profile_inventory(output, gui)
+            claim['preinstallDataRootAbsent'] = True; path.write_text(json.dumps(claim)); marker.write_text('foreign')
+            with self.assertRaises(ValueError): self.m.package_profile_inventory(output, gui)
+        self.assertEqual((profile / 'LocalCache/actual.txt').read_text(), 'actual app data')
+
     def test_project_inspection_closes_connection_on_success_and_both_failures(self):
         path = self.root / 'Dawn-thread.aup4'
         connect = sqlite3.connect
@@ -227,6 +252,51 @@ class ConsumerAudioTests(unittest.TestCase):
             flow = dict(base, **{field: value})
             with self.subTest(field=field, value=value), self.assertRaises(ValueError):
                 self.m.validate_flow(self.root.parent, flow, gui)
+
+    def menu_flow(self):
+        # Actual Special UIA label/role/geometry from run 34694396308. Owner,
+        # foreground and unseen Reverse geometry are policy fixture inputs.
+        target = dict(name='Special Menu', role='MenuItem', title='Audacity4', identity='fixture-item',
+                      pid=6484, nativePid=6484, foregroundPid=6484, hitPid=6484, matches=1,
+                      window=393616, foreground=262212, hitRoot=393616, main=262212, owned=True, enabled=True, offscreen=False,
+                      targetBounds=[699,445,209,32], windowBounds=[691,119,225,442], desktopBounds=[0,0,1920,1080], point=[803,461])
+        snap = dict(target=target, mainPid=6484, mainTitle='Dawn-thread * - WaveWeft 1.0.1', mainBounds=[377,89,1166,839],
+                    popupIdentity='fixture-root', popupRole='Window', popupClass='QQuickView',
+                    popupAutomationId='muse::accessibility::AccessibleAppRootObject.MenuView_WindowView_QQuickView',
+                    popupEnabled=True, popupVisible=True, targetInPopup=True,
+                    owners=[dict(window=393616, owner=262212, pid=6484), dict(window=262212, owner=0, pid=6484)])
+        action='reverse-selected-audio'
+        click=copy.deepcopy(snap);click['target']['name']='Reverse'
+        return dict(processId=6484, mainWindowHandle=262212, inputs=[
+            dict(action=action, kind='keys', keys=[17,65]),
+            dict(action=action, kind='click', before=dict(name='Effect',role='Button')),
+            dict(action=action, kind='menu-hover', before=snap, final=copy.deepcopy(snap), positioned=True),
+            dict(action=action, kind='menu-click', before=click, final=copy.deepcopy(click), sent=2)])
+
+    def test_exact_effect_pointer_sequence_and_mutations(self):
+        self.assertTrue(hasattr(self.m, 'validate_effect_pointer_inputs'), 'Independent pointer receipt gate absent')
+        base=self.menu_flow(); self.m.validate_effect_pointer_inputs(base)
+        for field,value in [('pid',99),('nativePid',99),('foregroundPid',99),('hitPid',99),('main',1),('window',1),
+                            ('foreground',393616),('hitRoot',262212),('matches',2),('name','Special'),('role','Text'),
+                            ('owned',False),('enabled',False),('offscreen',True),('identity','changed'),
+                            ('targetBounds',[699,445,209,999]),('point',[803,460]),('desktopBounds',[0,0,1024,768])]:
+            flow=copy.deepcopy(base);flow['inputs'][2]['final']['target'][field]=value
+            with self.subTest(field=field), self.assertRaises(ValueError):self.m.validate_effect_pointer_inputs(flow)
+        for field,value in [('mainPid',1),('mainTitle','foreign'),('popupClass','foreign'),('popupRole','Pane'),
+                            ('popupAutomationId','foreign'),('popupIdentity','changed'),('popupEnabled',False),('popupVisible',False),
+                            ('targetInPopup',False),('owners',[]),('mainBounds',[377,89,99999,839])]:
+            flow=copy.deepcopy(base);flow['inputs'][3]['final'][field]=value
+            with self.subTest(field=field), self.assertRaises(ValueError):self.m.validate_effect_pointer_inputs(flow)
+        for change in ('missing-hover','double-click','wrong-action','partial-click','position-not-proved','swapped', 'foreign-owner'):
+            flow=copy.deepcopy(base)
+            if change=='missing-hover':flow['inputs'].pop(2)
+            elif change=='double-click':flow['inputs'].append(copy.deepcopy(flow['inputs'][-1]))
+            elif change=='wrong-action':flow['inputs'][3]['action']='export'
+            elif change=='partial-click':flow['inputs'][3]['sent']=1
+            elif change=='position-not-proved':flow['inputs'][2]['positioned']=1
+            elif change=='swapped':flow['inputs'][2:]=reversed(flow['inputs'][2:])
+            else:flow['inputs'][2]['final']['owners'][0]['owner']=99
+            with self.subTest(change=change), self.assertRaises(ValueError):self.m.validate_effect_pointer_inputs(flow)
 
 
 if __name__ == '__main__':

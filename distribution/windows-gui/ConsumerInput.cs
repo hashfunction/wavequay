@@ -24,6 +24,17 @@ namespace WaveQuayQualification
         public double[] targetBounds, windowBounds, desktopBounds;
         public int[] point;
     }
+    public sealed class ConsumerMenuOwner
+    { public long window, owner; public int pid; }
+    public sealed class ConsumerMenuSnapshot
+    {
+        public ConsumerInputSnapshot target;
+        public int mainPid;
+        public string mainTitle, popupIdentity, popupRole, popupClass, popupAutomationId;
+        public double[] mainBounds;
+        public bool popupEnabled, popupVisible, targetInPopup;
+        public ConsumerMenuOwner[] owners;
+    }
     public static class ConsumerInput
     {
         public static bool FilenameChain(ConsumerFilenameNode[] nodes,int pid,long dialog,long edit)
@@ -68,6 +79,44 @@ namespace WaveQuayQualification
             Validate(a,name,role,title,pid,main,window); Validate(b,name,role,title,pid,main,window);
             Require(a.identity==b.identity && Same(a.targetBounds,b.targetBounds) && Same(a.windowBounds,b.windowBounds)
                 && Same(a.desktopBounds,b.desktopBounds), "Consumer target identity/geometry changed before input");
+        }
+        public static void Menu(ConsumerMenuSnapshot s,string name,int pid,long main)
+        {
+            Require(s!=null && s.target!=null && (name=="Special Menu" || name=="Reverse"),"Unexpected source-defined effect menu action");
+            var t=s.target;
+            Require(pid>0 && main!=0 && t.window!=0 && t.window!=main && t.main==main && t.matches==1
+                && t.name==name && t.role=="MenuItem" && t.title=="Audacity4" && !String.IsNullOrEmpty(t.identity)
+                && t.enabled && !t.offscreen && t.owned && s.targetInPopup,"Effect menu target is not unique, visible and exact");
+            Require(t.pid==pid && t.nativePid==pid && t.foregroundPid==pid && t.hitPid==pid && s.mainPid==pid
+                && t.foreground==main && t.hitRoot==t.window,"Non-activating menu main/foreground/hit ownership differs");
+            Require(s.popupRole=="Window" && s.popupClass=="QQuickView" && s.popupEnabled && s.popupVisible
+                && s.popupAutomationId=="muse::accessibility::AccessibleAppRootObject.MenuView_WindowView_QQuickView"
+                && !String.IsNullOrEmpty(s.popupIdentity) && s.mainTitle=="Dawn-thread * - WaveWeft 1.0.1",
+                "Effect menu source-defined popup/editor identity differs");
+            Require(s.owners!=null && s.owners.Length>=2 && s.owners.Length<=12,"Effect menu native owner chain is unbounded or missing");
+            var seen=new HashSet<long>();
+            for(int i=0;i<s.owners.Length;i++)
+            {
+                var o=s.owners[i];
+                Require(o!=null && o.pid==pid && o.window!=0 && seen.Add(o.window)
+                    && (i!=0 || o.window==t.window) && (i!=s.owners.Length-1 || o.window==main),"Effect menu native owner differs");
+                if(i<s.owners.Length-1)Require(s.owners[i+1]!=null && o.owner==s.owners[i+1].window && o.window!=main,"Effect menu owner chain is broken");
+            }
+            Require(Rect(t.targetBounds) && Rect(t.windowBounds) && Rect(t.desktopBounds) && Rect(s.mainBounds)
+                && Contains(t.windowBounds,t.targetBounds) && Contains(t.desktopBounds,t.windowBounds)
+                && Contains(t.desktopBounds,s.mainBounds),"Effect menu target/popup/editor clipped or invalid");
+            Require(t.point!=null && t.point.Length==2 && t.point[0]==(int)Math.Floor(t.targetBounds[0]+t.targetBounds[2]/2)
+                && t.point[1]==(int)Math.Floor(t.targetBounds[1]+t.targetBounds[3]/2),"Effect menu pointer differs from observed center");
+        }
+        public static void MenuStable(ConsumerMenuSnapshot a,ConsumerMenuSnapshot b,string name,int pid,long main)
+        {
+            Menu(a,name,pid,main);Menu(b,name,pid,main);
+            Require(a.target.window==b.target.window && a.target.identity==b.target.identity && a.popupIdentity==b.popupIdentity
+                && Same(a.target.targetBounds,b.target.targetBounds) && Same(a.target.windowBounds,b.target.windowBounds)
+                && Same(a.target.desktopBounds,b.target.desktopBounds) && Same(a.mainBounds,b.mainBounds)
+                && a.owners.Length==b.owners.Length,"Effect menu identity/geometry changed before pointer input");
+            for(int i=0;i<a.owners.Length;i++)Require(a.owners[i].window==b.owners[i].window && a.owners[i].owner==b.owners[i].owner
+                && a.owners[i].pid==b.owners[i].pid,"Effect menu owner changed before input");
         }
         public static void Keyboard(ConsumerKeyboardSnapshot s,int pid,long main,long window)
         {

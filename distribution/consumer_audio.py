@@ -169,6 +169,54 @@ def validate_project(path):
     return dict(**info, applicationId='AUDY', documentBytes=project[0][2], blocks=blocks, sampleBytes=samples, integrity='ok')
 
 
+def validate_effect_pointer_inputs(flow):
+    """Independently verify the two exact non-activating menu pointer actions."""
+    events = [e for e in flow['inputs'] if e['action'] == 'reverse-selected-audio']
+    require([e['kind'] for e in events] == ['keys', 'click', 'menu-hover', 'menu-click'],
+            'Effect pointer route is partial, repeated or reordered')
+    require(events[0]['keys'] == [17, 65] and events[1]['before']['name'] == 'Effect'
+            and events[1]['before']['role'] == 'Button', 'Effect pointer route did not select audio and open Effect')
+    require(events[2].get('positioned') is True and type(events[3].get('sent')) is int and events[3]['sent'] == 2,
+            'Effect pointer positioning/click incomplete')
+    pid, main = flow['processId'], flow['mainWindowHandle']
+    def rect(r):
+        return isinstance(r, list) and len(r) == 4 and all(type(v) in (int, float) and math.isfinite(v) for v in r) and min(r[2:]) >= 2
+    def contains(a, b):
+        return b[0] >= a[0] and b[1] >= a[1] and b[0]+b[2] <= a[0]+a[2] and b[1]+b[3] <= a[1]+a[3]
+    for event, name in zip(events[2:], ('Special Menu', 'Reverse')):
+        for snap in (event['before'], event['final']):
+            target = snap['target']; window = target['window']
+            require(type(window) is int and window > 0 and window != main and target['main'] == main
+                    and type(target['matches']) is int and target['matches'] == 1 and target['name'] == name
+                    and target['role'] == 'MenuItem' and target['title'] == 'Audacity4' and target['identity']
+                    and all(target[k] is True for k in ('owned', 'enabled')) and target['offscreen'] is False
+                    and snap['targetInPopup'] is True, 'Effect menu target identity/role/visibility differs')
+            require(all(target[k] == pid for k in ('pid', 'nativePid', 'foregroundPid', 'hitPid')) and snap['mainPid'] == pid
+                    and target['foreground'] == main and target['hitRoot'] == window, 'Effect menu native ownership differs')
+            require(snap['mainTitle'] == 'Dawn-thread * - WaveWeft 1.0.1' and snap['popupRole'] == 'Window'
+                    and snap['popupClass'] == 'QQuickView' and snap['popupIdentity']
+                    and snap['popupAutomationId'] == 'muse::accessibility::AccessibleAppRootObject.MenuView_WindowView_QQuickView'
+                    and snap['popupEnabled'] is True and snap['popupVisible'] is True, 'Effect menu popup identity differs')
+            owners = snap['owners']
+            require(isinstance(owners, list) and 2 <= len(owners) <= 12
+                    and owners[0]['window'] == window and owners[-1]['window'] == main
+                    and all(o['pid'] == pid and type(o['window']) is int and o['window'] > 0 for o in owners)
+                    and len({o['window'] for o in owners}) == len(owners)
+                    and all(o['owner'] == nxt['window'] and o['window'] != main for o, nxt in zip(owners, owners[1:])),
+                    'Effect menu owner chain differs')
+            require(all(rect(r) for r in (target['targetBounds'], target['windowBounds'], target['desktopBounds'], snap['mainBounds']))
+                    and contains(target['windowBounds'], target['targetBounds']) and contains(target['desktopBounds'], target['windowBounds'])
+                    and contains(target['desktopBounds'], snap['mainBounds']), 'Effect menu geometry is invalid/clipped')
+            b = target['targetBounds']
+            require(target['point'] == [math.floor(b[0]+b[2]/2), math.floor(b[1]+b[3]/2)], 'Effect menu pointer is not observed center')
+        before, final = event['before'], event['final']
+        require(all(before[k] == final[k] for k in ('popupIdentity', 'mainBounds', 'owners'))
+                and all(before['target'][k] == final['target'][k] for k in ('identity', 'window', 'targetBounds', 'windowBounds', 'desktopBounds')),
+                'Effect menu changed between pointer checks')
+    require([e for e in flow['inputs'] if e['kind'] in ('menu-hover', 'menu-click')] == events[2:],
+            'Unexpected additional effect menu action')
+
+
 def validate_flow(output, flow, gui):
     require(flow['sourceCommit'] == gui['sourceCommit'] and flow['processId'] == gui['processId'], 'Consumer differs from retained startup source/process')
     require(flow['completed'] is True and flow['errors'] == [] and type(flow['normalCloseExitCode']) is int
@@ -200,7 +248,10 @@ def validate_flow(output, flow, gui):
         require((width, height) == (screen['width'], screen['height']) and width >= 400 and height >= 300 and screen['sampledColors'] >= 16,
                 'Blank or clipped consumer screenshot')
     require(flow['inputs'] and flow['hardwareRecordingOrPlaybackTested'] is False, 'Consumer input evidence absent or hardware claim differs')
+    validate_effect_pointer_inputs(flow)
     for event in flow['inputs']:
+        if event['kind'] in ('menu-hover', 'menu-click'):
+            continue  # complete independent pointer checks above, not keyboard focus
         require(event['kind'] in ('click', 'keys', 'unicode'), 'Unknown consumer input kind')
         if event['kind'] == 'click':
             require(event['sent'] == 2, 'Partial native click')
@@ -269,6 +320,44 @@ def profile_inventory(output, gui):
     return result
 
 
+def package_data_root(family):
+    import ctypes
+    value = ctypes.create_unicode_buffer(32768)
+    require(ctypes.windll.shell32.SHGetFolderPathW(None, 28, None, 0, value) == 0,
+            'Cannot resolve actual LocalAppData package root')
+    return Path(value.value) / 'Packages' / family
+
+
+def package_profile_inventory(output, gui):
+    """Read exact newly installed package data; only package uninstall removes it."""
+    launch = gui.get('installedLaunch')
+    if launch is None:
+        require(not (output / 'installed-profile-claim.json').exists(), 'Staged workflow has an installed profile claim')
+        return []
+    path = output / 'installed-profile-claim.json'
+    no_redirect(path)
+    claim = json.loads(path.read_text(encoding='utf-8-sig'))
+    require(claim['schemaVersion'] == 1 and claim['sourceCommit'] == gui['sourceCommit']
+            and claim['preinstallDataRootAbsent'] is True, 'Package data was not absent before this installation')
+    mode, family = claim['identityMode'], claim['packageFamilyName']
+    name = {'store': '1659hashfunction.WaveQuay', 'qualification': 'Trieflow.WaveQuay.Qualification'}.get(mode)
+    require(name and re.fullmatch(re.escape(name) + '_[0-9a-hjkmnp-tv-z]{13}', family), 'Foreign package profile identity')
+    if mode == 'store':
+        require(family == '1659hashfunction.WaveQuay_r3hxytd7jt6c4', 'Assigned package profile family differs')
+    full = name + '_1.0.1.0_x64__' + family.rsplit('_', 1)[1]
+    require(claim['packageFullName'] == full and launch['packageFullName'] == full
+            and launch['identityMode'] == mode and launch['packageFamilyName'] == family,
+            'Package profile differs from retained activated identity')
+    root = package_data_root(family)
+    require(root.is_absolute() and Path(claim['dataRoot']) == root and Path(launch['packageDataRoot']) == root,
+            'Package profile escaped exact native LocalAppData/PFN root')
+    no_redirect(root)
+    token = claim['token']
+    require(str(uuid.UUID(token)) == token and (root / '.waveweft-msix-owner').read_text(encoding='utf-8') == token,
+            'Package profile ownership marker changed')
+    return [(root, snapshot(root))]
+
+
 def registry_inventory(gui):
     import winreg
     claim = gui['consumerProfileClaim']
@@ -323,9 +412,13 @@ def finalize(output, source_commit):
         files = fixture_snapshot(root, claim)
         result['files'] = files
         profiles = profile_inventory(output, gui)
+        package_profiles = package_profile_inventory(output, gui)
         registry = registry_inventory(gui)
         result['profileFiles'] = [dict(path=str(path), entries=entries) for path, entries in profiles]
         result['profileRegistry'] = registry
+        if package_profiles:
+            result['packageProfileFiles'] = [dict(path=str(path), entries=entries) for path, entries in package_profiles]
+            result['packageProfileCleanupDelegatedToUninstall'] = True
         try:
             flow = json.loads((output / 'consumer-workflow.json').read_text(encoding='utf-8-sig'))
             validate_flow(output, flow, gui)
@@ -333,7 +426,7 @@ def finalize(output, source_commit):
             result['exports'] = {name: validate_audio(root / name) for name in ('reversed.wav', 'reopened.wav')}
             # Read recipe metadata only after the original process's normal exit.
             recipes = []
-            for profile, entries in profiles:
+            for profile, entries in profiles + package_profiles:
                 for relative in entries:
                     if Path(relative).name != 'export-recipes-v1.json':
                         continue

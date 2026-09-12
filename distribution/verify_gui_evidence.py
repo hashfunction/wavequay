@@ -5,9 +5,11 @@ Synthetic unit fixtures exercise this policy only. Only a fresh Windows probe of
 an inventoried stage can supply product qualification evidence.
 """
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import re
 from pathlib import Path, PureWindowsPath
 import struct
 
@@ -102,7 +104,44 @@ def verify_display(evidence_dir, expected_commit):
                 'Unchanged native display evidence differs')
 
 
-def verify(report, inventory, evidence_dir, expected_commit):
+def verify_installed_launch(report, installed):
+    """A stage receipt can never substitute for native package activation."""
+    mode = installed.get('identityMode')
+    name = {'store': '1659hashfunction.WaveQuay', 'qualification': 'Trieflow.WaveQuay.Qualification'}.get(mode)
+    require(name is not None and installed.get('sourceCommit') == report['sourceCommit'], 'Wrong installed mode/source')
+    family = installed.get('package_family_name')
+    require(isinstance(family, str) and re.fullmatch(re.escape(name) + '_[0-9a-hjkmnp-tv-z]{13}', family), 'Unexpected package family')
+    if mode == 'store':
+        require(family == '1659hashfunction.WaveQuay_r3hxytd7jt6c4', 'Assigned Store package family differs')
+    full = name + '_1.0.1.0_x64__' + family.rsplit('_', 1)[1]
+    require(installed.get('package_full_name') == full and installed.get('add_completed') is True
+            and installed.get('installed_by_us') is True and installed.get('preflight_package_full_names') == []
+            and installed.get('preinstall_data_root_absent') is True, 'Exact fresh package registration ownership missing')
+    require(windows_path(installed['install_location']) == windows_path(report['stageRoot']), 'Installed root differs')
+    launch = report.get('installedLaunch')
+    require(isinstance(launch, dict) and 'environment' not in report
+            and launch.get('brokerEnvironmentUnmodified') is True, 'Installed launch did not use normal broker environment')
+    require(launch.get('identityMode') == mode and launch.get('packageFullName') == full
+            and launch.get('processPackageFullName') == full and launch.get('packageFamilyName') == family
+            and launch.get('aumid') == family + '!WaveQuay', 'Activated process is not the exact installed package/AUMID')
+    require(windows_path(launch['packageDataRoot']) == windows_path(installed['package_data_root'])
+            and windows_path(launch['packageDataRoot']).parts[-2:] == ('Packages', family), 'Package data root differs')
+    before = launch.get('preexistingProcessIds')
+    require(isinstance(before, list) and len(before) <= 4096 and all(type(pid) is int and pid >= 0 for pid in before)
+            and len(before) == len(set(before)) and report['processId'] not in before, 'Broker reused an existing process')
+    try:
+        def ticks(value):
+            match = re.fullmatch(r'(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,7}))?Z', value)
+            require(match, 'Expected native UTC timestamp')
+            seconds = datetime.fromisoformat(match[1]).replace(tzinfo=timezone.utc)
+            return int(seconds.timestamp()) * 10000000 + int((match[2] or '').ljust(7, '0'))
+        started, activation = (ticks(value) for value in (report['startedUtc'], launch['activationUtc']))
+        require(0 <= started - activation <= 60 * 10000000, 'Process start is outside owned activation interval')
+    except (ValueError, TypeError, AttributeError) as error:
+        raise ValueError('Invalid installed activation/start time: ' + str(error)) from error
+
+
+def verify(report, inventory, evidence_dir, expected_commit, *, installed=None):
     expected_title = load_expected_title()
     verify_display(evidence_dir, expected_commit)
     require(report.get('expectedMainWindowTitle') == expected_title, 'Observer used a different expected title')
@@ -115,16 +154,20 @@ def verify(report, inventory, evidence_dir, expected_commit):
     stage, system = windows_path(report['stageRoot']), windows_path(report['systemRoot'])
     executable = windows_path(report['executable'])
     require(executable == stage / 'bin' / 'WaveWeft.exe', 'Wrong staged executable')
-    env = {k.upper(): v for k, v in report['environment'].items()}
-    allowed = {'PATH', 'SYSTEMROOT', 'WINDIR', 'SYSTEMDRIVE', 'COMSPEC', 'USERPROFILE', 'APPDATA',
-               'LOCALAPPDATA', 'TEMP', 'TMP', 'LANG', 'CI', 'WAVEQUAY_STARTUP_DIAGNOSTICS', 'QT_FORCE_STDERR_LOGGING', 'QT_DEBUG_PLUGINS'}
-    require(set(env) <= allowed, 'Unexpected inherited environment')
-    if 'WAVEQUAY_STARTUP_DIAGNOSTICS' in env:
-        require(env['WAVEQUAY_STARTUP_DIAGNOSTICS'] == '1' and env.get('CI') == 'true',
-                'Startup diagnostics require exact disposable-CI opt-in')
-    require([windows_path(p) for p in env['PATH'].split(';')] ==
-            [stage / 'bin', system / 'System32', system], 'PATH contains runner/build dependencies')
-    require(windows_path(env['SYSTEMROOT']) == system, 'Wrong system root')
+    if installed is not None:
+        verify_installed_launch(report, installed)
+    else:
+        require('installedLaunch' not in report, 'Installed observations require independent registration evidence')
+        env = {k.upper(): v for k, v in report['environment'].items()}
+        allowed = {'PATH', 'SYSTEMROOT', 'WINDIR', 'SYSTEMDRIVE', 'COMSPEC', 'USERPROFILE', 'APPDATA',
+                   'LOCALAPPDATA', 'TEMP', 'TMP', 'LANG', 'CI', 'WAVEQUAY_STARTUP_DIAGNOSTICS', 'QT_FORCE_STDERR_LOGGING', 'QT_DEBUG_PLUGINS'}
+        require(set(env) <= allowed, 'Unexpected inherited environment')
+        if 'WAVEQUAY_STARTUP_DIAGNOSTICS' in env:
+            require(env['WAVEQUAY_STARTUP_DIAGNOSTICS'] == '1' and env.get('CI') == 'true',
+                    'Startup diagnostics require exact disposable-CI opt-in')
+        require([windows_path(p) for p in env['PATH'].split(';')] ==
+                [stage / 'bin', system / 'System32', system], 'PATH contains runner/build dependencies')
+        require(windows_path(env['SYSTEMROOT']) == system, 'Wrong system root')
     require(report['userStateBefore'] and all(s['exists'] is False for s in report['userStateBefore']),
             'Existing profile state would bypass genuine onboarding')
     locked = {}
@@ -196,10 +239,12 @@ def main():
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--inventory', type=Path, required=True)
     parser.add_argument('--source-commit', required=True)
+    parser.add_argument('--installed-record', type=Path)
     args = parser.parse_args()
     verify(json.loads(args.report.read_text(encoding='utf-8-sig')),
-           json.loads(args.inventory.read_text(encoding='utf-8-sig')), args.report.parent, args.source_commit)
-    print('PASS: staged WaveWeft onboarding and main-window observations verified; audio/export/license gates remain open.')
+           json.loads(args.inventory.read_text(encoding='utf-8-sig')), args.report.parent, args.source_commit,
+           installed=json.loads(args.installed_record.read_text(encoding='utf-8-sig')) if args.installed_record else None)
+    print('PASS: WaveWeft onboarding and editor observations verified for the selected launch scope; package, audio and source gates are separate.')
 
 
 if __name__ == '__main__':

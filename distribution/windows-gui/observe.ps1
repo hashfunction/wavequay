@@ -5,6 +5,9 @@ param(
     [Parameter(Mandatory=$true)][string]$EvidenceDirectory,
     [string]$SourceCommit,
     [string]$ExpectedMainWindowTitle,
+    [ValidateSet('qualification','store')][string]$IdentityMode,
+    [string]$PackageFullName,
+    [string]$PackageFamilyName,
     [switch]$SelfTest
 )
 $ErrorActionPreference = 'Stop'
@@ -19,7 +22,7 @@ try {
         [System.Windows.Automation.AutomationElement].Assembly.Location,
         [System.Windows.Automation.ControlType].Assembly.Location,
         [System.Windows.Rect].Assembly.Location)
-    $sources = @('GuiProbe.cs','OnboardingInput.cs','ConsumerInput.cs','ConsumerDriver.cs','ConsumerProfile.cs','PrivateEnvironment.cs','ConsumerTextReadback.cs') | ForEach-Object { Join-Path $PSScriptRoot $_ }
+    $sources = @('GuiProbe.cs','OnboardingInput.cs','ConsumerInput.cs','ConsumerDriver.cs','ConsumerProfile.cs','PrivateEnvironment.cs','PackageActivation.cs','ConsumerTextReadback.cs') | ForEach-Object { Join-Path $PSScriptRoot $_ }
     Add-Type -Path $sources -ReferencedAssemblies $references
     if ($SelfTest) {
         [WaveQuayQualification.GuiProbe]::SelfTest() | Set-Content -Encoding UTF8 (Join-Path $EvidenceDirectory 'gui-helper-self-test.json')
@@ -27,6 +30,10 @@ try {
         exit 0
     }
     if (-not $Stage -or -not $ExpectedMainWindowTitle -or $SourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Expected an exact stage and source commit.' }
+    if($IdentityMode) {
+        exit ([WaveQuayQualification.GuiProbe]::RunInstalled($Stage,$EvidenceDirectory,$SourceCommit,$ExpectedMainWindowTitle,$IdentityMode,$PackageFullName,$PackageFamilyName))
+    }
+    if($PackageFullName -or $PackageFamilyName){throw 'Installed identity requires explicit installed mode'}
     exit ([WaveQuayQualification.GuiProbe]::Run($Stage, $EvidenceDirectory, $SourceCommit, $ExpectedMainWindowTitle))
 } catch {
     $_ | Out-String | Set-Content -Encoding UTF8 (Join-Path $EvidenceDirectory 'helper-error.log')

@@ -18,6 +18,11 @@ include(${MUSE_FRAMEWORK_PATH}/buildscripts/cmake/ExtDepsManifest.cmake)
 # bundle each consumed dep's runtime libs + licenses into the app.
 extdeps_install_consumed(MACOS_BUNDLE audacity.app)
 
+if(AU_TRIEFLOW_DISTRIBUTION AND OS_IS_WIN)
+    include(${CMAKE_SOURCE_DIR}/distribution/RecordConsumedDependencies.cmake)
+    waveweft_record_consumed_dependencies()
+endif()
+
 get_property(_extdeps_consumed GLOBAL PROPERTY EXTDEPS_CONSUMED)
 foreach(_dep ${_extdeps_consumed})
     if (EXISTS "${LOCAL_ROOT_PATH}/${_dep}/lib")
