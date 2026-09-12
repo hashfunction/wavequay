@@ -114,7 +114,9 @@ StyledDialogView {
 
             onLoaded: {
                 item.navigationSection = root.navigationSection
-                item.activeButtonTitle = buttons.activeButton.text
+                // The model emits currentPageChanged before nextButtonTextChanged.
+                // Keep the reading surrogate in sync after the page is loaded.
+                item.activeButtonTitle = Qt.binding(function () { return buttons.activeButton.text })
 
                 if (item.navNextPageRequested) {
                     item.navNextPageRequested.connect(function () {

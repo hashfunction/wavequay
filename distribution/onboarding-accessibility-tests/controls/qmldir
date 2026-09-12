@@ -1,0 +1,10 @@
+module Muse.UiComponents
+FlatButton 1.0 FlatButton.qml
+StyledDialogView 1.0 StyledDialogView.qml
+DialogView 1.0 DialogView.qml
+StyledTextLabel 1.0 StyledTextLabel.qml
+StyledIconLabel 1.0 StyledIconLabel.qml
+NavigationFocusBorder 1.0 NavigationFocusBorder.qml
+StyledRectangularShadow 1.0 StyledRectangularShadow.qml
+SeparatorLine 1.0 SeparatorLine.qml
+singleton IconCode 1.0 IconCode.qml

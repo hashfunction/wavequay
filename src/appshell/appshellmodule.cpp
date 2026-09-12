@@ -35,6 +35,7 @@
 #include "internal/appshellconfiguration.h"
 #include "internal/startupscenario.h"
 #include "internal/sessionsmanager.h"
+#include "internal/dialogaccessibility.h"
 
 #ifdef Q_OS_MAC
 #include "internal/platform/macos/macosappmenumodelhook.h"
@@ -104,6 +105,11 @@ void AppShellModule::onInit(const muse::IApplication::RunMode& mode)
 {
     if (mode == muse::IApplication::RunMode::AudioPluginRegistration) {
         return;
+    }
+
+    auto accessibleRegistry = globalIoc()->resolve<muse::accessibility::IQAccessibleInterfaceRegister>(mname);
+    if (accessibleRegistry) {
+        registerDialogAccessibility(*accessibleRegistry);
     }
 
     m_appShellConfiguration->init();
