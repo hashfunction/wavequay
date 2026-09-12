@@ -43,23 +43,32 @@ def identity_for_mode(mode="qualification"):
     return dict(STORE_IDENTITY if mode == "store" else QUALIFICATION_IDENTITY)
 
 
-def generated_files(mode='qualification'):
+def generated_files(mode='qualification', source_files=None):
     artwork = ARTWORK.read_bytes()
-    return {
+    result = {
         'AppxManifest.xml': create_manifest(mode),
         'Assets/StoreLogo.png': resize_png(artwork, 50),
         'Assets/Square44x44Logo.png': resize_png(artwork, 44),
         'Assets/Square150x150Logo.png': resize_png(artwork, 150),
     }
+    if source_files is not None:
+        for name, data in source_files.items():
+            _checked_path(name)
+            if not isinstance(data, bytes) or not (name in ('SOURCE-INFO.json', 'SOURCE-README.txt') or name.startswith('Notices/')):
+                raise ValueError('Invalid generated source/notice package member')
+            if name in result:
+                raise ValueError('Duplicate generated package member')
+            result[name] = data
+    return result
 
 
-def expected_payload(release, mode='qualification'):
+def expected_payload(release, mode='qualification', source_files=None):
     """Regenerate from current stage and source-owned artwork, never a receipt."""
     files = inventory_tree(release)
     assert_unsigned_payload(files)
     if not files.get('bin/WaveWeft.exe', {}).get('bytes'):
         raise ValueError('Missing WaveWeft executable')
-    generated = generated_files(mode)
+    generated = generated_files(mode, source_files)
     for name, data in generated.items():
         if name in files or any(n.casefold() == name.casefold() for n in files):
             raise ValueError('Stage contains generated package input: ' + name)
@@ -69,11 +78,12 @@ def expected_payload(release, mode='qualification'):
         _register_path(name, seen)
         if name in PACKAGE_METADATA:
             raise ValueError('Stage contains container metadata: ' + name)
+    assert_unsigned_payload(files)
     return files
 
 
-def stage_payload(release, destination, mode='qualification'):
-    expected = expected_payload(release, mode)
+def stage_payload(release, destination, mode='qualification', source_files=None):
+    expected = expected_payload(release, mode, source_files)
     destination = Path(destination)
     for ancestor in destination.absolute().parents:
         _reject_link(ancestor)
@@ -83,7 +93,7 @@ def stage_payload(release, destination, mode='qualification'):
         target.parent.mkdir(parents=True, exist_ok=True)
         with _regular_stream(Path(release) / name) as source, target.open('xb') as output:
             shutil.copyfileobj(source, output, 1024 * 1024)
-    for name, data in generated_files(mode).items():
+    for name, data in generated_files(mode, source_files).items():
         _write_new(destination / name, data)
     if inventory_tree(destination) != expected:
         raise ValueError('Package payload changed while copying')

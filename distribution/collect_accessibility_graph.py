@@ -15,7 +15,7 @@ COMMON = {'kind', 'schemaVersion', 'pid', 'sequence', 'snapshot', 'elapsedMs'}
 FIELDS = {
     'started': {'diagnosticOnly', 'maxBytes', 'maxNodes', 'maxDepth', 'maxDurationMs'},
     'query': {'operation', 'id', 'index', 'phase'},
-    'window': {'window', 'objectClass'},
+    'window': {'window', 'objectClass', 'ownerClass', 'ownerClassChain', 'selected'},
     'node': {'id', 'depth', 'valid', 'role', 'invisible', 'disabled', 'parent', 'parentIndex', 'childCount',
              'window', 'parentWindow', 'windowRoot', 'objectClass', 'itemClass', 'itemOwnerClass', 'itemRole', 'ignored', 'itemWindow'},
     'edge': {'id', 'index', 'child', 'childParent', 'valid', 'repeated'},
@@ -52,7 +52,13 @@ def validate(data, pid):
         require(type(row['elapsedMs']) is int and row['elapsedMs'] >= elapsed, 'Graph clock differs')
         elapsed = row['elapsedMs']
         for key, value in row.items():
-            if key.endswith('Class'):
+            if key == 'ownerClassChain':
+                require(isinstance(value, list) and len(value) <= 8
+                        and all(isinstance(name, str) and re.fullmatch(r'[A-Za-z_][A-Za-z0-9_:]{0,127}', name)
+                                for name in value), 'Invalid owner class chain')
+            elif key == 'selected':
+                require(type(value) is bool, 'Invalid window selection metadata')
+            elif key.endswith('Class'):
                 require(isinstance(value, str) and (value == '' or re.fullmatch(r'[A-Za-z_][A-Za-z0-9_:]{0,127}', value)), 'Invalid class metadata')
             elif key in {'kind', 'operation', 'phase', 'reason'}:
                 continue
@@ -61,7 +67,7 @@ def validate(data, pid):
         if row['kind'] == 'query':
             require(row['operation'] in OPERATIONS and row['phase'] in {'begin', 'end'}, 'Graph query differs')
         if row['kind'] == 'truncated':
-            require(row['reason'] in {'byte-limit', 'node-limit', 'depth-limit', 'child-count-limit', 'time-limit'}, 'Graph truncation differs')
+            require(row['reason'] in {'byte-limit', 'node-limit', 'depth-limit', 'child-count-limit', 'time-limit', 'capture-limit'}, 'Graph truncation differs')
         rows.append(row)
     require(rows[0]['kind'] == 'started' and rows[0]['diagnosticOnly'] is True
             and [rows[0][key] for key in ('maxBytes', 'maxNodes', 'maxDepth', 'maxDurationMs')] == [MAX_BYTES, 256, 32, 90000], 'Graph start limits differ')

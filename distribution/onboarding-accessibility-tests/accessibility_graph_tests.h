@@ -4,6 +4,9 @@
 #include <QDir>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
+#include <QQmlComponent>
+#include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QUuid>
 #include "src/appshell/internal/accessibilitygraphdiagnostics.h"
@@ -52,6 +55,136 @@ static QList<QJsonObject> graphRecords(const QString& path) {
     }
     return rows;
 }
+// Uses actual Qt filename-generated metaobjects and the exact QObject parenting
+// statement in WindowView::initView. It does not substitute a Muse provider.
+struct GraphFixtureView : QQuickView {
+    QAccessibleInterface* root = nullptr;
+    mutable int rootReads = 0;
+    QAccessibleInterface* accessibleRoot() const override { ++rootReads; return root; }
+};
+static void graphTargetTimerTests(QAccessibleInterface* actualRoot) {
+    using au::appshell::AccessibilityGraphDiagnostics;
+    require(actualRoot && actualRoot->window(), "actual Muse popup required");
+    QQmlEngine ownerEngine;
+    const auto owner = [&](const char* filename) {
+        QQmlComponent component(&ownerEngine);
+        component.setData("import QtQml\nQtObject { property int scene: 1 }", QUrl::fromLocalFile(filename));
+        auto result = std::unique_ptr<QObject>(component.create());
+        require(bool(result), "Qt generates actual QML owner class");
+        return result;
+    };
+    auto mainOwner = owner("/graph-fixture/Main.qml");
+    auto exportOwner = owner("/graph-fixture/ExportDialog.qml");
+    auto similarOwner = owner("/graph-fixture/ExportDialogExtra.qml");
+    const QString generatedClass = exportOwner->metaObject()->className();
+    require(QRegularExpression("^ExportDialog_QMLTYPE_[0-9]+$").match(generatedClass).hasMatch(),
+            "actual ExportDialog filename generates the selected owner class");
+    QList<GraphFixtureInterface*> nodes;
+    QList<QAccessible::Id> ids;
+    for (int index = 0; index < 300; ++index) {
+        nodes.append(new GraphFixtureInterface);
+        ids.append(QAccessible::registerAccessibleInterface(nodes.back()));
+        if (index) { nodes.front()->children.append(nodes.back()); nodes.back()->parentValue = nodes.front(); }
+    }
+    {
+        QTemporaryDir broadDirectory;
+        const auto broadPath = graphFixturePath(broadDirectory);
+        AccessibilityGraphDiagnostics broad(broadPath);
+        for (int tick = 0; tick < 8 && broad.isOpen(); ++tick) broad.snapshot({nodes.front()});
+        require(!broad.isOpen(), "eight large pre-export graphs exhaust the original byte budget");
+        const auto broadRows = graphRecords(broadPath);
+        require(broadRows[broadRows.size()-2]["reason"] == "byte-limit", "large graph stops at the original byte cap");
+    }
+    GraphFixtureView mainView, similarView, hiddenView, uncreatedView;
+    mainView.root = similarView.root = hiddenView.root = uncreatedView.root = nodes.front();
+    mainView.QObject::setParent(mainOwner.get());
+    mainView.setTitle("Export audio"); mainOwner->setObjectName(generatedClass);
+    similarView.QObject::setParent(similarOwner.get());
+    hiddenView.QObject::setParent(exportOwner.get());
+    uncreatedView.QObject::setParent(exportOwner.get());
+    QWindow wrongWindowType;
+    wrongWindowType.QObject::setParent(exportOwner.get());
+    mainView.show(); similarView.show(); hiddenView.show(); hiddenView.hide(); wrongWindowType.show();
+    require(mainView.handle() && hiddenView.handle() && !uncreatedView.handle(), "native fixture window states");
+    QTemporaryDir temporary;
+    const auto path = graphFixturePath(temporary);
+    qputenv("WAVEWEFT_ACCESSIBILITY_GRAPH", path.toUtf8()); qputenv("CI", "true");
+    AccessibilityGraphDiagnostics::startFromEnvironment();
+    AccessibilityGraphDiagnostics* reader = nullptr;
+    for (auto* child : qApp->children())
+        if (auto* diagnostic = dynamic_cast<AccessibilityGraphDiagnostics*>(child)) reader = diagnostic;
+    require(reader && reader->isOpen(), "explicit environment starts the production timer");
+    // Eight real timer ticks precede the target. The original 300-node main
+    // graph would consume the original 8 MiB cap before this observation ends.
+    for (int tick = 1; tick <= 8; ++tick) {
+        require(waitUntil([&] {
+            for (const auto& row : graphRecords(path))
+                if (row["kind"] == "snapshot-end" && row["snapshot"].toInt() >= tick) return true;
+            return false;
+        }), "production QTimer records bounded pre-export window metadata");
+        require(mainView.rootReads == 0 && similarView.rootReads == 0,
+                "pre-export and similarly named windows must not query accessibleRoot");
+        require(reader->isOpen(), "late export retains the graph budget");
+    }
+    bool mainMetadata = false, wrongTypeMetadata = false;
+    for (const auto& row : graphRecords(path)) {
+        require(row["kind"] != "query" && row["kind"] != "node", "pre-export records contain metadata only");
+        if (row["kind"] != "window") continue;
+        require(row["selected"] == false, "pre-export metadata reports unselected windows");
+        const auto chain = row["ownerClassChain"].toArray();
+        require(chain.size() <= 8, "owner superclass metadata bounded");
+        mainMetadata |= row["window"].toDouble() == double(mainView.winId())
+            && row["ownerClass"] == mainOwner->metaObject()->className();
+        wrongTypeMetadata |= row["window"].toDouble() == double(wrongWindowType.winId())
+            && row["ownerClass"] == generatedClass;
+    }
+    require(mainMetadata && wrongTypeMetadata && QFileInfo(path).size() < 128 * 1024,
+            "all observed owner classes are retained without large graph queries");
+    auto* target = actualRoot->window();
+    auto* previousParent = target->QObject::parent();
+    target->QObject::setParent(exportOwner.get()); // exact WindowView::initView relationship
+    require(target->QObject::parent() == exportOwner.get() && !target->parent(),
+            "QObject controller ownership is distinct from QWindow native parenting");
+    for (int capture = 1; capture <= 3; ++capture) {
+        require(waitUntil([&] {
+            int starts = 0;
+            for (const auto& row : graphRecords(path))
+                if (row["kind"] == "query" && row["operation"] == "window-root" && row["phase"] == "begin") ++starts;
+            return starts >= capture;
+        }), "late actual Muse export-owned popup is queried by the production timer");
+    }
+    require(!reader->isOpen(), "three target captures stop the timer");
+    target->QObject::setParent(previousParent);
+    delete reader;
+    int selected = 0, rootReads = 0; bool museSeen = false;
+    const auto records = graphRecords(path);
+    for (const auto& row : records) {
+        if (row["kind"] == "window" && row["selected"].toBool()) {
+            ++selected;
+            require(row["window"].toDouble() == double(target->winId()) && row["ownerClass"] == generatedClass,
+                    "only the exact actual export-owned QQuickView is selected");
+        }
+        rootReads += row["kind"] == "query" && row["operation"] == "window-root" && row["phase"] == "begin";
+        museSeen |= row["kind"] == "node" && row["objectClass"] == "muse::accessibility::AccessibleObject";
+    }
+    require(selected == 3 && rootReads == 3 && museSeen, "three target graphs retain actual Muse providers");
+    require(records[records.size()-2]["reason"] == "capture-limit" && records.back()["kind"] == "end",
+            "capture limit terminates explicitly without claiming success");
+    require(mainView.rootReads == 0 && similarView.rootReads == 0 && hiddenView.rootReads == 0
+            && uncreatedView.rootReads == 0 && !uncreatedView.handle(), "unselected and hidden windows stay unqueried");
+    QFile file(path); require(file.open(QIODevice::ReadOnly), "read targeted graph bytes"); const auto bytes = file.readAll();
+    require(!bytes.contains("Export audio"), "window titles remain omitted");
+    if (qEnvironmentVariableIsSet("WAVE_GRAPH_TARGET_TEST_RECORD")) {
+        QFile retained(qEnvironmentVariable("WAVE_GRAPH_TARGET_TEST_RECORD"));
+        require(retained.open(QIODevice::WriteOnly | QIODevice::NewOnly), "exclusive target replay output");
+        require(retained.write(bytes) == bytes.size(), "target replay retains original writer bytes");
+    }
+    // Stack windows must relinquish QObject ownership before their owners die.
+    mainView.QObject::setParent(nullptr); similarView.QObject::setParent(nullptr);
+    hiddenView.QObject::setParent(nullptr); uncreatedView.QObject::setParent(nullptr); wrongWindowType.QObject::setParent(nullptr);
+    for (auto id : ids) QAccessible::deleteAccessibleInterface(id);
+    qInfo() << "Accessibility graph delayed export target fixture passed";
+}
 static void graphDiagnosticTests(QAccessibleInterface* actualRoot = nullptr) {
     using au::appshell::AccessibilityGraphDiagnostics;
     QTemporaryDir temporary;
@@ -66,29 +199,9 @@ static void graphDiagnosticTests(QAccessibleInterface* actualRoot = nullptr) {
     require(!QFile::exists(path), "diagnostic path without explicit disposable CI is dormant");
     if (oldPath.isNull()) qunsetenv("WAVEWEFT_ACCESSIBILITY_GRAPH"); else qputenv("WAVEWEFT_ACCESSIBILITY_GRAPH", oldPath);
     if (oldCI.isNull()) qunsetenv("CI"); else qputenv("CI", oldCI);
-    {
-        QTemporaryDir timerDirectory;
-        const auto timerPath = graphFixturePath(timerDirectory);
-        qputenv("WAVEWEFT_ACCESSIBILITY_GRAPH", timerPath.toUtf8()); qputenv("CI", "true");
-        AccessibilityGraphDiagnostics::startFromEnvironment();
-        AccessibilityGraphDiagnostics* timerReader = nullptr;
-        for (auto* child : qApp->children())
-            if (auto* reader = dynamic_cast<AccessibilityGraphDiagnostics*>(child)) timerReader = reader;
-        require(timerReader && timerReader->isOpen(), "explicit environment starts the production timer");
-        require(waitUntil([&] {
-            for (const auto& row : graphRecords(timerPath)) if (row["kind"] == "snapshot-end") return true;
-            return false;
-        }), "actual QTimer collects native-window graph on the GUI thread");
-        timerReader->finish(); delete timerReader;
-        bool windowSeen = false, museSeen = false;
-        for (const auto& row : graphRecords(timerPath)) {
-            windowSeen |= row["kind"] == "window" && row["window"].toDouble() > 0;
-            museSeen |= row["kind"] == "node" && row["objectClass"] == "muse::accessibility::AccessibleObject";
-        }
-        require(windowSeen && museSeen, "timer observes existing platform windows and actual Muse providers");
-        if (oldPath.isNull()) qunsetenv("WAVEWEFT_ACCESSIBILITY_GRAPH"); else qputenv("WAVEWEFT_ACCESSIBILITY_GRAPH", oldPath);
-        if (oldCI.isNull()) qunsetenv("CI"); else qputenv("CI", oldCI);
-    }
+    graphTargetTimerTests(actualRoot);
+    if (oldPath.isNull()) qunsetenv("WAVEWEFT_ACCESSIBILITY_GRAPH"); else qputenv("WAVEWEFT_ACCESSIBILITY_GRAPH", oldPath);
+    if (oldCI.isNull()) qunsetenv("CI"); else qputenv("CI", oldCI);
     auto* first = new GraphFixtureInterface;
     auto* second = new GraphFixtureInterface;
     first->objectValue.setObjectName("private-object-name-must-not-be-read");

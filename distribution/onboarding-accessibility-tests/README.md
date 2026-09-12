@@ -109,3 +109,17 @@ action. It does not synthesize Windows keyboard input, run UI Automation, or
 verify a rendered desktop screenshot. The unchanged Windows qualification
 probe must still prove the genuine popup, exact identities, foreground and
 process ownership, all three interactions, and stable editor before release.
+
+## Bounded export graph diagnostic fixture
+
+The same executable also exercises the opt-in production graph reader, with
+its original byte/node/depth, dormant-mode and ownership checks. The targeted
+fixture uses actual Qt filename-generated controller metaobjects and
+`QQuickView::QObject::setParent`, matching `WindowView::initView`. Eight real
+timer ticks with a visible 300-node non-export graph must perform no graph
+queries. A later export-owned actual Muse popup must be read exactly three
+times and end with `capture-limit`, without changing original onboarding
+assertions or the 30-second process deadline. The minimal controller component
+proves Qt ownership/class semantics, not the full export service or Windows
+UIA. See `distribution/windows-gui/accessibility-graph-review.md` for the
+original native trace, fixture boundaries and fresh-run interpretation.

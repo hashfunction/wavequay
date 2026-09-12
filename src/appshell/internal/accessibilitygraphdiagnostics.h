@@ -40,6 +40,7 @@ private:
     QElapsedTimer m_clock;
     QSet<QAccessibleInterface*> m_visited;
     int m_snapshot = 0;
+    int m_targetSnapshots = 0;
     int m_sequence = 0;
     bool m_stopped = false;
     bool m_inSnapshot = false;

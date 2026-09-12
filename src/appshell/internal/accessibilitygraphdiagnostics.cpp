@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QRegularExpression>
 #include <QScopedValueRollback>
@@ -17,6 +18,16 @@ constexpr qint64 maxBytes = 8 * 1024 * 1024;
 constexpr int maxNodes = 256;
 constexpr int maxDepth = 32;
 constexpr int maxDurationMs = 90000;
+constexpr int maxTargetSnapshots = 3;
+constexpr int maxOwnerClasses = 8;
+
+QString metaClassName(const QMetaObject* meta)
+{
+    if (!meta) return {};
+    static const QRegularExpression allowed(QStringLiteral("^[A-Za-z_][A-Za-z0-9_:]{0,127}$"));
+    const auto text = QString::fromLatin1(meta->className());
+    return allowed.match(text).hasMatch() ? text : QStringLiteral("InvalidClass");
+}
 }
 
 AccessibilityGraphDiagnostics::AccessibilityGraphDiagnostics(const QString& path, QObject* parent) : QObject(parent), m_file(QDir::fromNativeSeparators(path))
@@ -64,11 +75,7 @@ qint64 AccessibilityGraphDiagnostics::existingWindowId(QWindow* window)
 
 QString AccessibilityGraphDiagnostics::className(QObject* object)
 {
-    if (!object) return {};
-    const QByteArray name(object->metaObject()->className());
-    static const QRegularExpression allowed(QStringLiteral("^[A-Za-z_][A-Za-z0-9_:]{0,127}$"));
-    const auto text = QString::fromLatin1(name);
-    return allowed.match(text).hasMatch() ? text : QStringLiteral("InvalidClass");
+    return metaClassName(object ? object->metaObject() : nullptr);
 }
 
 bool AccessibilityGraphDiagnostics::write(QJsonObject row, bool terminal)
@@ -107,24 +114,43 @@ void AccessibilityGraphDiagnostics::finish()
 
 void AccessibilityGraphDiagnostics::captureWindows()
 {
-    if (!isOpen() || m_inSnapshot) return;
+    if (!isOpen() || m_inSnapshot || QThread::currentThread() != qApp->thread()) return;
     if (m_clock.elapsed() >= maxDurationMs) { truncate("time-limit"); finish(); return; }
     // QTimer runs on the GUI thread after the current event callback returns.
-    // Query only visible windows that already have a platform window.
+    // Observe only visible windows that already have a platform window.
+    // WindowView::initView makes the controller the QQuickView's QObject
+    // parent; QWindow::parent() instead describes native window parenting.
+    // Never infer the target from a title, object name or accessible text.
+    static const QRegularExpression exportOwner(QStringLiteral("^ExportDialog_QMLTYPE_[0-9]+$"));
     QScopedValueRollback<bool> guard(m_inSnapshot, true);
     ++m_snapshot;
     m_visited.clear();
     write({{"kind", "snapshot-start"}});
+    bool targetCaptured = false;
     try {
         for (auto* window : QGuiApplication::topLevelWindows()) {
             if (!window->isVisible() || !window->handle()) continue;
             const auto handle = existingWindowId(window);
-            write({{"kind", "window"}, {"window", double(handle)}, {"objectClass", className(window)}});
+            auto* owner = window->QObject::parent();
+            const auto windowClass = className(window), ownerClass = className(owner);
+            QJsonArray ownerClasses;
+            for (auto* meta = owner ? owner->metaObject() : nullptr;
+                 meta && ownerClasses.size() < maxOwnerClasses; meta = meta->superClass()) {
+                ownerClasses.append(metaClassName(meta));
+            }
+            const bool selected = windowClass == QStringLiteral("QQuickView") && exportOwner.match(ownerClass).hasMatch();
+            if (!write({{"kind", "window"}, {"window", double(handle)}, {"objectClass", windowClass},
+                        {"ownerClass", ownerClass}, {"ownerClassChain", ownerClasses}, {"selected", selected}})) return;
+            if (!selected) continue;
+            targetCaptured = true;
             auto* root = read("window-root", 0, -1, [window] { return window->accessibleRoot(); });
             if (root) visit(root, 0);
             if (m_visited.size() == maxNodes) { truncate("node-limit"); break; }
         }
         write({{"kind", "snapshot-end"}, {"nodes", m_visited.size()}});
+        if (isOpen() && targetCaptured && ++m_targetSnapshots == maxTargetSnapshots) {
+            truncate("capture-limit"); finish();
+        }
     } catch (const Stopped&) { }
 }
 

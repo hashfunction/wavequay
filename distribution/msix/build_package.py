@@ -18,6 +18,7 @@ from package import (identity_for_mode, package_name, expected_payload, stage_pa
                      verify_msix, verify_unpacked, verify_installed, inventory_tree, file_record)
 from files import _regular_stream, _reject_link, _write_new
 from run_context import current as current_run, validate as validate_run
+from source_material import generate as source_material
 
 SDK = '10.0.26100.0'
 
@@ -31,7 +32,7 @@ def load(path):
 
 
 def source_inputs(root):
-    names = ['CMakeLists.txt', 'version.cmake', 'buildscripts/cmake/SetupDependencies.cmake',
+    names = ['CMakeLists.txt', 'version.cmake', '.gitmodules', '.gitattributes', '.github/workflows/windows.yml', 'buildscripts/cmake/SetupDependencies.cmake',
              'SetupConfigure.cmake', 'buildscripts/ci/windows/wavequay-release.cmake',
              'muse_deps/prebuilt.lock', 'distribution/consumer_audio.py', 'distribution/verify_gui_evidence.py',
              'distribution/invoke-windows-gui.ps1', 'distribution/qualify-windows.ps1',
@@ -41,6 +42,7 @@ def source_inputs(root):
         for path in sorted((root / base).rglob('*')):
             if path.is_file() and '__pycache__' not in path.parts and path.suffix in ('.py', '.ps1', '.cs', '.txt', '.cmake', '.patch'):
                 names.append(path.relative_to(root).as_posix())
+    names.extend('distribution/corresponding-source/'+name for name in inventory_tree(root/'distribution/corresponding-source'))
     return {name: file_record(root / name) for name in sorted(set(names))}
 
 
@@ -51,13 +53,14 @@ def context(release, root, native, source_commit, mode):
     inputs = load(native)
     run = current_run(source_commit)
     validate_run(inputs.get('runContext'), run)
+    material = source_material(root, source_commit)
     if inputs.get('schemaVersion') != 1 or inputs.get('sourceCommit') != source_commit or inputs.get('payload') != measured:
         raise ValueError('Current stage differs from same-source native input inventory')
     return dict(schemaVersion=1, sourceCommit=source_commit, runContext=run, identityMode=mode, identity=identity_for_mode(mode),
                 qualificationIdentityOnly=mode == 'qualification', storeIdentityUsed=mode == 'store',
                 signed=False, publicRelease=False, licenseClearanceClaimed=False, installationQualificationPassed=False,
                 sourceInputs=source_inputs(root), nativeInput=file_record(native), release=measured,
-                artwork=file_record(root / 'distribution/branding/waveweft.png'), payload=expected_payload(release, mode))
+                artwork=file_record(root / 'distribution/branding/waveweft.png'), payload=expected_payload(release, mode, material))
 
 
 def tool_record(path):
@@ -82,7 +85,7 @@ def build_package(release, root, native, source_commit, makeappx, output, mode='
     temporary = Path(tempfile.mkdtemp(prefix='.waveweft-msix-', dir=output.parent))
     stage, package, unpacked = temporary / 'stage', temporary / package_name(mode), temporary / 'unpacked'
     try:
-        if stage_payload(release, stage, mode) != record['payload']:
+        if stage_payload(release, stage, mode, source_material(root, source_commit)) != record['payload']:
             raise ValueError('Source package inputs changed before build')
         commands = [[str(makeappx), 'pack', '/d', str(stage), '/p', str(package), '/v', '/h', 'SHA256'],
                     [str(makeappx), 'unpack', '/p', str(package), '/d', str(unpacked), '/v']]

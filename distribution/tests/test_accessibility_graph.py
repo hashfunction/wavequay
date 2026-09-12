@@ -90,6 +90,45 @@ class GraphCaptureTests(unittest.TestCase):
         data = self.path.read_bytes().replace(b'"operation": "child"', b'"operation": "private typed text", "operation": "child"')
         with self.assertRaises(ValueError): graph.validate(data, 123)
 
+    def test_target_window_metadata_and_capture_limit_preserve_diagnostic_only(self):
+        self.rows[1] = dict(kind='window', window=1234, objectClass='QQuickView',
+            ownerClass='ExportDialog_QMLTYPE_12', ownerClassChain=['ExportDialog_QMLTYPE_12', 'DialogView', 'QObject'],
+            selected=True, schemaVersion=1, pid=123, sequence=2, elapsedMs=1, snapshot=1)
+        self.rows.insert(2, dict(kind='truncated', reason='capture-limit', schemaVersion=1, pid=123,
+            sequence=3, elapsedMs=2, snapshot=3))
+        self.rows[-1].update(sequence=4, elapsedMs=3, snapshot=3)
+        self.save()
+        original = self.path.read_bytes()
+        result = graph.collect(self.report_path)
+        self.assertEqual(result['errors'], [])
+        self.assertFalse(result['accepted'])
+        self.assertTrue(result['files'][0]['completed'])  # stream ended, not product acceptance
+        self.assertTrue(result['files'][0]['truncated'])
+        self.assertEqual((self.output / 'accessibility-graph.jsonl').read_bytes(), original)
+
+    def test_window_owner_metadata_refuses_unbounded_or_text_payload(self):
+        row = dict(kind='window', window=1234, objectClass='QQuickView', ownerClass='QObject',
+            ownerClassChain=['QObject'], selected=False, schemaVersion=1, pid=123, sequence=2, elapsedMs=1, snapshot=1)
+        self.rows[1] = row
+        for key, value in [('ownerClassChain', ['QObject'] * 9), ('ownerClassChain', 'QObject'),
+                           ('ownerClassChain', ['private text']), ('ownerClassChain', [123]),
+                           ('ownerClass', 'private text'), ('selected', 1), ('selected', 'true')]:
+            with self.subTest(key=key, value=value):
+                self.rows[1] = {**row, key: value}; self.save()
+                with self.assertRaises(ValueError): graph.validate(self.path.read_bytes(), 123)
+
+    @unittest.skipUnless(os.environ.get('WAVE_GRAPH_TARGET_TEST_RECORD'), 'optional actual targeted native writer replay')
+    def test_actual_targeted_native_writer_record(self):
+        data = Path(os.environ['WAVE_GRAPH_TARGET_TEST_RECORD']).read_bytes()
+        rows = [json.loads(line) for line in data.splitlines()]
+        parsed = graph.validate(data, rows[0]['pid'])
+        self.assertTrue(parsed['completed'])
+        self.assertTrue(parsed['truncated'])
+        self.assertEqual(rows[-2]['reason'], 'capture-limit')
+        self.assertEqual(sum(row['kind'] == 'window' and row.get('selected') is True for row in rows), 3)
+        first_query = next(row for row in rows if row['kind'] == 'query')
+        self.assertGreaterEqual(first_query['snapshot'], 9)
+
     @unittest.skipUnless(os.environ.get('WAVE_GRAPH_TEST_RECORD'), 'optional actual native writer replay')
     def test_actual_native_writer_record(self):
         data = Path(os.environ['WAVE_GRAPH_TEST_RECORD']).read_bytes()

@@ -143,3 +143,102 @@ parent/index and window-root IDs. If these are consistent, the record narrows
 the next investigation to the Qt/UIA handoff; it does not establish that
 conclusion in advance. This host cannot reproduce Windows UIA E_FAIL. No
 Windows qualification, native fix or Store-ready output is claimed.
+
+## Export-target refinement after run 34704945851
+
+The original run's graph is 8,387,748 bytes, SHA256
+`5487862a2d4e8d415f2209c1ac5244e3ac4a8a187e678c588552c69a7f56e62e`.
+It contains 50,404 rows and ends at the byte limit after 6,073 ms. Its 48,178
+query rows concern pre-export windows. The later consumer failure concerns
+Export HWND 721104 and signed Qt identity -2147482850, which is unsigned
+2147484446 (`0x8000031e`). That identity is absent from the original graph.
+The original graph remains unchanged and still passes the bounded collector.
+No export-provider cause can be inferred from this pre-export trace.
+
+The timer now records bounded class/handle metadata for visible windows with
+an existing platform handle, but queries a graph only when the actual window
+class is `QQuickView` and its **direct QObject parent's** generated class is
+exactly `ExportDialog_QMLTYPE_<decimal digits>`. The producer is
+`WindowView::initView` in `muse/framework/uicomponents/qml/Muse/UiComponents/windowview.cpp`:
+it creates a QQuickView and calls `m_view->QObject::setParent(this)`.
+`src/importexport/export/qml/Export/ExportDialog.qml` supplies the export
+controller. `QWindow::parent()` is the native-window relationship and must not
+be substituted for QObject ownership.
+
+Each observed window row retains `objectClass`, `ownerClass`, up to eight
+`ownerClassChain` entries, and a Boolean `selected`. Unknown owners are recorded
+without accessibility queries; titles, object names, user text and values
+are never used as a fallback. `selected` describes target selection; the
+existing flushed `window-root` begin/end pair records the actual query.
+
+Only the first three snapshots containing a selected export target are read.
+The reader then records **`truncated: capture-limit`** followed by `end` and
+stops its timer. This is a capture limit, not a success result. The original
+8 MiB, 90-second, 256-node and 32-depth limits still apply first, including when
+the export target never appears or its provider blocks. The collector's
+`completed` means the JSONL stream contains a final `end`; its independent
+`truncated` flag remains true and `accepted` remains false. Original consumer,
+source, package, module, input, output and cleanup gates are unchanged.
+
+### Focused evidence and verification
+
+The new actual Qt fixture first failed against the prior production reader:
+`pre-export and similarly named windows must not query accessibleRoot`.
+The new collector fixture independently failed on `Unexpected graph fields`
+before the bounded metadata schema was extended.
+
+The fixture executes the actual timer and production graph reader. Its
+300-node pre-export graph exhausts the unchanged byte cap when read directly
+within eight snapshots. With window selection enabled, eight real timer ticks
+retain only small window metadata and zero graph/root queries. A later actual
+Muse popup receives the same QObject controller-parent relationship as the
+production WindowView, then is read exactly three times. Qt itself creates
+the controller's class from an `ExportDialog.qml` component URL. It is not a
+handwritten class-name mock. Similarly named controllers, a title/object-name
+lookalike, an exact-owner window with the wrong Qt window class, hidden windows
+and windows without native handles remain unqueried. No platform window is
+created by the reader. The previous malformed/cycle/duplicate, direct byte,
+node/depth, fresh-visited-set, dormant-mode and ownership tests remain.
+
+This tests actual Qt generated-class semantics and the production parenting
+statement with the real Muse providers. The lightweight component body is a
+QtObject fixture; it does **not** load the full production export QML/services
+or reproduce Windows UIA. The fresh Windows record must still establish the
+actual controller class and capture the failing export graph. A different
+actual owner class will produce metadata only and must be investigated, not
+silently accepted.
+
+Local Qt 6.11.2 verification reused the existing small build directory. All
+four provider-order/main-window variants passed within the unchanged 30-second
+per-process deadline (approximately 15 seconds each), including all original
+onboarding interactions. The retained first variant's target graph is
+167,858 bytes and 1,001 rows; its first query is snapshot 9 and its three target
+captures end at snapshot 11 with `capture-limit`. Its actual generated owner
+class was `ExportDialog_QMLTYPE_17`; this number is evidence, not a pin.
+
+Fresh focused validation also passed:
+
+- 10 graph collector tests, including both actual C++ writer byte streams,
+  bounded owner-chain/type refusals, original-file preservation and explicit
+  capture-limit metadata without acceptance.
+- 33 GUI evidence and 20 audio/file workflow tests, including diagnostic-mode
+  rejection and original independent file/recipe/cleanup gates.
+- The actual PowerShell graph preparation/ownership and collection-boundary
+  fixture, preserving the original error for nonzero and thrown collection.
+- C++ fixture rebuild and `git diff --check`.
+
+Retained private review evidence is under
+`/private/tmp/waveweft-target-graph-final` (four original fixture logs,
+`variants.json`, direct and targeted writer JSONL). The original failing
+fixture log is `/private/tmp/waveweft-target-graph-red.log`.
+The replay command for these exact writer outputs is:
+
+```text
+WAVE_GRAPH_TEST_RECORD=/private/tmp/waveweft-target-graph-final/direct.jsonl \
+WAVE_GRAPH_TARGET_TEST_RECORD=/private/tmp/waveweft-target-graph-final/target.jsonl \
+python3 -m unittest discover -s distribution/tests -p test_accessibility_graph.py -v
+```
+
+The next reviewed native diagnostic still requires explicit
+`capture_accessibility_graph=true`. No Windows export repair, consumer success,
+installed qualification or Store readiness is claimed by this refinement.

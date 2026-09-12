@@ -53,6 +53,12 @@ class MsixBuildTests(unittest.TestCase):
                     out = b.build_package(release, ROOT, native, 'a' * 40, tool, root / 'output', mode, runner=sdk)
                     record = json.loads((out / 'package-record.json').read_text())
                     self.assertEqual(record['identityMode'], mode)
+                    expected_material=b.source_material(ROOT,'a'*40)
+                    self.assertTrue(set(expected_material).issubset(record['payload']))
+                    with zipfile.ZipFile(out/b.package_name(mode)) as archive:
+                        self.assertEqual(archive.read('SOURCE-INFO.json'),expected_material['SOURCE-INFO.json'])
+                        self.assertEqual(archive.read('Notices/Repository/application/0001-LICENSE.txt'),
+                                         expected_material['Notices/Repository/application/0001-LICENSE.txt'])
                     for flag in ('signed', 'publicRelease', 'licenseClearanceClaimed', 'installationQualificationPassed'):
                         self.assertIs(record[flag], False)
                     self.assertEqual(len(calls), 2)

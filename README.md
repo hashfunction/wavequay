@@ -14,9 +14,13 @@ editor observation are required for this renamed source; historical screenshots
 and reports retain their observed names. Audio/export, licensing and Store
 qualification remain separate pending gates.
 
-Existing settings and documents keep their compatibility namespaces. Parent-owned
-Store packaging must retain Identity `1659hashfunction.WaveQuay` and ApplicationId
-`WaveQuay`; this source repository does not contain an MSIX packager.
+Existing settings and documents keep their compatibility namespaces. The
+[source-owned Windows package pipeline](distribution/msix/README.md) retains
+Identity `1659hashfunction.WaveQuay` and ApplicationId `WaveQuay`. It builds a
+separate disposable identity and the assigned Store identity, then requires two
+complete installed consumer lifecycles and independent source/unsigned export
+checks. Implementing those checks does not establish that a Windows release has
+passed them. Current run receipts remain the authority for actual results.
 
 ## Upstream project and licensing
 

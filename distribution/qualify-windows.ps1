@@ -32,7 +32,9 @@ qmake -query | Set-Content build-evidence/qt.txt
 $env:EXTDEPS_CACHE = Join-Path (Get-Location) '.ci-dependency-cache'
 $sourceCommit = (git rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Cannot identify exact source revision.' }
-$result = @{ diagnosticAccessibilityGraph=[bool]$CaptureAccessibilityGraph; diagnosticProvenanceErrors=@(); source_commit=$sourceCommit; built=$false; native_recipe_tests=$false; staged=$false;
+$runText=Invoke-Checked python @('distribution/msix/run_context.py','--source-commit',$sourceCommit)
+$runContext=$runText | ConvertFrom-Json
+$result = @{ runContext=$runContext; stageEvidence=@{}; diagnosticAccessibilityGraph=[bool]$CaptureAccessibilityGraph; diagnosticProvenanceErrors=@(); source_commit=$sourceCommit; built=$false; native_recipe_tests=$false; staged=$false;
     windows_main_window_verified=$false; windows_local_file_workflow_verified=$false; audio_device_tests=$false; native_export_tests=$false;
     source_license_closure=$false; submitted=$false }
 try {
@@ -89,6 +91,10 @@ try {
         throw 'Independent local import/edit/save/recipe/export/reopen validation is incomplete.'
     }
     $result.windows_local_file_workflow_verified = $true
+    . ./distribution/msix/file-io.ps1
+    foreach($name in @('gui-observations.json','consumer-workflow.json','consumer-validation.json','consumer-fixture-claim.json','display-preparation.json','watchdog.json')) {
+        $result.stageEvidence['gui/'+$name]=Get-WaveWeftFile ('build-evidence/gui/'+$name)
+    }
 } finally {
     $result | ConvertTo-Json -Depth 8 | Set-Content build-evidence/result.json
     Get-ChildItem .qt-archives,.ci-dependency-cache -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in @('.zip','.7z','.gz','.xz','.bz2','.zst','.tar') } | ForEach-Object {

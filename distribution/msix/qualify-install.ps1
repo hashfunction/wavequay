@@ -204,9 +204,11 @@ function Invoke-WaveWeftInstall {
     $core=Invoke-WaveWeftInstallCore $ops
     if($state.output){
         $evidence=[ordered]@{}
-        foreach($name in @('gui-observations.json','consumer-workflow.json','consumer-validation.json','installed-profile-claim.json','display-preparation.json','watchdog.json')){
+        foreach($name in @('gui-observations.json','consumer-workflow.json','consumer-validation.json','consumer-fixture-claim.json','installed-profile-claim.json','display-preparation.json','watchdog.json')){
             $path=Join-Path $state.output ('gui/'+$name);if(Test-Path -LiteralPath $path){$evidence['gui/'+$name]=Get-WaveWeftFile $path}
         }
+        $start=Join-Path $state.output 'installation-start.json'
+        if(Test-Path -LiteralPath $start){$evidence['installation-start.json']=Get-WaveWeftFile $start}
         $result=[ordered]@{schemaVersion=1;sourceCommit=$env:GITHUB_SHA;runId=$env:GITHUB_RUN_ID;runAttempt=$env:GITHUB_RUN_ATTEMPT;runContext=$state.runContext;
             identityMode=$IdentityMode;identity=$identity;installation_qualification_passed=[bool]$core.passed;primary_error=$core.primary_error;cleanup_errors=@($core.cleanup_errors);
             add_completed=$state.addCompleted;installed_by_us=$state.installedByUs;preflight_package_full_names=@($state.before);residual_package_full_names=@($state.residual);

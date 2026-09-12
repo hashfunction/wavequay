@@ -42,6 +42,29 @@ jobs:
         env:
           WAVEWEFT_CAPTURE_ACCESSIBILITY_GRAPH: ${{ inputs.capture_accessibility_graph || false }}
         run: ./distribution/qualify-windows.ps1 -CaptureAccessibilityGraph:($env:WAVEWEFT_CAPTURE_ACCESSIBILITY_GRAPH -ceq 'true')
+      - name: Compare complete native corresponding source and original notices
+        shell: pwsh
+        run: |
+          python distribution/msix/source_closure.py collect --native build-evidence/native-inputs.json --output build-evidence/source-closure.json --source-commit $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Complete current source closure failed' }
+      - name: Qualify disposable and assigned Store installations independently
+        shell: pwsh
+        run: ./distribution/msix/qualify-packages.ps1
+      - name: Independently export exact unsigned Store package
+        shell: pwsh
+        run: |
+          python distribution/msix/store_export.py --source-commit $env:GITHUB_SHA --output store-upload
+          if ($LASTEXITCODE -ne 0) { throw 'Independent unsigned Store export gate failed' }
+      - name: Upload only the qualified unsigned Store package and release receipt
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: WaveWeft-Store-1.0.1.0-x64
+          path: |
+            store-upload/WaveWeft_1.0.1.0_x64.msix
+            store-upload/store-export.json
+          retention-days: 14
+          if-no-files-found: error
       - name: Preserve metadata, UI trees, screenshots and diagnostics (no native binaries)
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -59,6 +82,12 @@ jobs:
             build-evidence/gui-helper/*.log
             build-evidence/native-source/qt/sbom/*.json
             build-evidence/native-source/qt/sbom/*.spdx
+            build-evidence/msix/qualification-result.json
+            build-evidence/msix/*/package/package-record.json
+            build-evidence/msix/*/install/*.json
+            build-evidence/msix/*/install/gui/*.json
+            build-evidence/msix/*/install/gui/*.png
+            build-evidence/msix/*/install/gui/*.log
             build/CMakeCache.txt
             build/CMakeFiles/CMakeConfigureLog.yaml
             build-recipe-tests/Testing/Temporary/LastTest.log

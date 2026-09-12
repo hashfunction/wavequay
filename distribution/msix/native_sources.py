@@ -159,6 +159,35 @@ def collect(root, build, stage, qt, source_commit):
                 sourceLicenseClosure=False, openItems=issues)
 
 
+def observe(root, build, stage, qt, source_commit, run, evidence, *, retain_qt=False):
+    """Reobserve the same current sources/archives; optionally retain originals once."""
+    from run_context import validate
+    validate(run, run)
+    require(run['sourceCommit'] == source_commit, 'Native source/run context differs')
+    record = collect(root, build, stage, qt, source_commit)
+    record['runContext'] = run
+    record['qtPrefix'] = str(qt)
+    # The command-line release collector always observes the original Qt
+    # archives. The lower-level consumed-prefix collector remains useful for
+    # separately testing unresolved ownership without inventing Qt metadata.
+    from qt_native_proof import collect_and_retain as collect_qt, collect as reobserve_qt
+    tool = shutil.which('cmake')
+    require(tool, 'Original Qt archive comparison requires the configured CMake tool')
+    retained = evidence / 'native-source' / 'qt'
+    record['qtOriginalArchives'] = (collect_qt(root, qt, record['payload'], Path(tool).resolve(), retained) if retain_qt
+                                   else reobserve_qt(root, qt, record['payload'], Path(tool).resolve()))
+    from platform_native_proof import collect as collect_mesa
+    record['mesaOriginalArchive'] = collect_mesa(root, record['payload'], Path(tool).resolve())
+    from windows_runtime_proof import collect as collect_windows
+    record['windowsRuntimeOrigins'] = collect_windows(build / 'waveweft-windows-runtimes.json',
+        evidence / 'windows-runtime-origins.json', record['payload'], source_commit, run)
+    record['openItems'] = [item for item in record['openItems']
+                           if item != 'Qt original archive/member/SBOM/source/notices and Microsoft redistribution records pending']
+    record['openItems'].append('Qt/Mesa original native archives and Microsoft origin observations verified; complete preferred-source/notice delivery and Microsoft terms gate pending')
+    require(inventory_tree(stage) == record['payload'], 'Current stage changed during original native observations')
+    return record
+
+
 def main():
     parser = argparse.ArgumentParser()
     for name in ('root', 'build', 'stage', 'qt', 'output'):
@@ -167,25 +196,8 @@ def main():
     args = parser.parse_args()
     from run_context import current
     run = current(args.source_commit)
-    record = collect(*(getattr(args, field).absolute() for field in ('root', 'build', 'stage', 'qt')), args.source_commit)
-    record['runContext'] = run
-    # The command-line release collector always observes the original Qt
-    # archives. The lower-level consumed-prefix collector remains useful for
-    # separately testing unresolved ownership without inventing Qt metadata.
-    from qt_native_proof import collect_and_retain as collect_qt
-    tool = shutil.which('cmake')
-    require(tool, 'Original Qt archive comparison requires the configured CMake tool')
-    retained = args.output.absolute().parent / 'native-source' / 'qt'
-    record['qtOriginalArchives'] = collect_qt(args.root.absolute(), args.qt.absolute(), record['payload'], Path(tool).resolve(), retained)
-    from platform_native_proof import collect as collect_mesa
-    record['mesaOriginalArchive'] = collect_mesa(args.root.absolute(), record['payload'], Path(tool).resolve())
-    from windows_runtime_proof import collect as collect_windows
-    record['windowsRuntimeOrigins'] = collect_windows(args.build.absolute() / 'waveweft-windows-runtimes.json',
-        args.output.absolute().parent / 'windows-runtime-origins.json', record['payload'], args.source_commit, run)
-    record['openItems'] = [item for item in record['openItems']
-                           if item != 'Qt original archive/member/SBOM/source/notices and Microsoft redistribution records pending']
-    record['openItems'].append('Qt/Mesa original native archives and Microsoft origin observations verified; complete preferred-source/notice delivery and Microsoft terms gate pending')
-    require(inventory_tree(args.stage.absolute()) == record['payload'], 'Current stage changed during original native observations')
+    record = observe(*(getattr(args, field).absolute() for field in ('root', 'build', 'stage', 'qt')),
+                     args.source_commit, run, args.output.absolute().parent, retain_qt=True)
     with args.output.open('x', encoding='utf-8') as output:
         json.dump(record, output, indent=2); output.write('\n')
 
