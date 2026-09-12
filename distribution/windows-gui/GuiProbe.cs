@@ -50,6 +50,13 @@ namespace WaveQuayQualification
         private static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr handle);
+        [StructLayout(LayoutKind.Sequential)] private struct Accounting
+        {
+            public long UserTime, KernelTime, PeriodUserTime, PeriodKernelTime;
+            public uint PageFaults, Processes, ActiveProcesses, TerminatedProcesses;
+        }
+        [DllImport("kernel32.dll", SetLastError = true)] private static extern bool QueryInformationJobObject(IntPtr job, int infoClass, out Accounting info, uint size, IntPtr length);
+        [DllImport("kernel32.dll", SetLastError = true)] private static extern bool TerminateJobObject(IntPtr job, uint exitCode);
 
         public OwnedJob()
         {
@@ -68,6 +75,23 @@ namespace WaveQuayQualification
         {
             if (!AssignProcessToJobObject(handle, process.Handle)) throw new Win32Exception();
         }
+        public bool WaitForEmpty(int milliseconds)
+        {
+            var clock = Stopwatch.StartNew();
+            do
+            {
+                Accounting info;
+                if (!QueryInformationJobObject(handle, 1, out info, (uint)Marshal.SizeOf(typeof(Accounting)), IntPtr.Zero)) throw new Win32Exception();
+                if (info.ActiveProcesses == 0) return true;
+                Thread.Sleep(50);
+            } while (clock.ElapsedMilliseconds < milliseconds);
+            return false;
+        }
+        public bool StopAndWait()
+        {
+            if (!WaitForEmpty(50) && !TerminateJobObject(handle, 1)) throw new Win32Exception();
+            return WaitForEmpty(5000);
+        }
         public void Dispose()
         {
             if (handle != IntPtr.Zero)
@@ -78,7 +102,7 @@ namespace WaveQuayQualification
         }
     }
 
-    public static class GuiProbe
+    public static partial class GuiProbe
     {
         private static readonly string[] Pages = { "Select a theme", "Clip visualization", "What UI layout (workspace) do you want?" };
         private static readonly string[] Buttons = { "Next", "Next", "Accept & continue" };
@@ -414,6 +438,7 @@ namespace WaveQuayQualification
             Process process = null;
             OwnedJob job = null;
             StreamWriter stdout = null, stderr = null;
+            bool consumerClosedNormally = false;
             var clock = Stopwatch.StartNew();
             int transientAutomationElements = 0;
             try
@@ -444,6 +469,7 @@ namespace WaveQuayQualification
                 foreach (var variable in env) start.EnvironmentVariables.Add(variable.Key, variable.Value);
                 foreach (string key in new[] { "USERPROFILE", "APPDATA", "LOCALAPPDATA", "TEMP" }) Directory.CreateDirectory(env[key]);
                 report["environment"] = env;
+                report["consumerProfileClaim"] = ClaimConsumerProfile(state, privateRoot);
                 report["executableSha256"] = Hash(executable);
                 stdout = new StreamWriter(Path.Combine(directory, "stdout.log"), false, new UTF8Encoding(false)) { AutoFlush = true };
                 stderr = new StreamWriter(Path.Combine(directory, "stderr.log"), false, new UTF8Encoding(false)) { AutoFlush = true };
@@ -523,6 +549,9 @@ namespace WaveQuayQualification
                                 {
                                     Alive(process);
                                     report["survivedUntilCleanup"] = true;
+                                    consumerClosedNormally = RunConsumer(process, window, directory, expectedMainWindowTitle, sourceCommit, report);
+                                    if (!job.WaitForEmpty(5000)) throw new InvalidOperationException("Owned child processes remained after normal app close");
+                                    report["consumerClosedNormally"] = consumerClosedNormally;
                                     return 0;
                                 }
                                 firstMain = clock.ElapsedMilliseconds;
@@ -570,12 +599,18 @@ namespace WaveQuayQualification
                 bool closed = false, exited = false;
                 try
                 {
-                    if (process != null && (bool)report["survivedUntilCleanup"] && process.HasExited)
+                    if (process != null && (bool)report["survivedUntilCleanup"] && process.HasExited && !consumerClosedNormally)
                     {
                         report["survivedUntilCleanup"] = false;
                         errors.Add("Process exited before owned cleanup: " + process.ExitCode);
                     }
-                    if (job != null) { job.Dispose(); closed = true; }
+                    if (job != null)
+                    {
+                        bool empty = false;
+                        try { empty = job.StopAndWait(); }
+                        finally { report["ownedJobEmptyBeforeClose"] = empty; job.Dispose(); closed = true; }
+                        if (!empty) errors.Add("Owned job still had active processes at cleanup");
+                    }
                     if (process != null)
                     {
                         try
@@ -631,6 +666,7 @@ namespace WaveQuayQualification
                         job.Assign(child);
                         Thread.Sleep(100);
                         if (child.HasExited) throw new InvalidOperationException("Cleanup fixture exited before job closure");
+                        if (!job.StopAndWait()) throw new InvalidOperationException("Owned job accounting did not confirm zero active processes");
                     }
                     if (!child.WaitForExit(5000)) throw new InvalidOperationException("Owned job failed to stop its real child");
                 }

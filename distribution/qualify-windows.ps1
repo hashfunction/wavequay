@@ -20,12 +20,14 @@ $env:EXTDEPS_CACHE = Join-Path (Get-Location) '.ci-dependency-cache'
 $sourceCommit = (git rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') { throw 'Cannot identify exact source revision.' }
 $result = @{ source_commit=$sourceCommit; built=$false; native_recipe_tests=$false; staged=$false;
-    windows_main_window_verified=$false; audio_device_tests=$false; native_export_tests=$false;
+    windows_main_window_verified=$false; windows_local_file_workflow_verified=$false; audio_device_tests=$false; native_export_tests=$false;
     source_license_closure=$false; submitted=$false }
 try {
     Invoke-Checked python @('-m','unittest','discover','-s','distribution/tests','-v')
     & ./distribution/windows-gui/test_onboarding_input.ps1
     & ./distribution/windows-gui/test_display_modes.ps1
+    & ./distribution/windows-gui/test_consumer_input.ps1
+    & ./distribution/windows-gui/test_consumer_text_readback.ps1
     & ./distribution/invoke-windows-gui.ps1 -SelfTest -EvidenceDirectory (Join-Path (Get-Location) 'build-evidence/gui-helper')
     Invoke-Checked cmake @('-S','.ci-googletest','-B','build-gtest','-G','Ninja','-DCMAKE_BUILD_TYPE=Release','-DCMAKE_CXX_STANDARD=17','-Dgtest_force_shared_crt=ON','-DBUILD_GMOCK=ON',"-DCMAKE_INSTALL_PREFIX=$(Get-Location)/.ci-gtest-install")
     Invoke-Checked cmake @('--build','build-gtest','--parallel','2')
@@ -49,6 +51,11 @@ try {
     Invoke-Checked python @('distribution/verify_gui_evidence.py','--report','build-evidence/gui/gui-observations.json',
         '--inventory','build-evidence/stage-inventory.json','--source-commit',$sourceCommit)
     $result.windows_main_window_verified = $true
+    $consumer = Get-Content build-evidence/gui/consumer-validation.json -Raw | ConvertFrom-Json
+    if ($consumer.sourceCommit -ne $sourceCommit -or $consumer.verified -ne $true -or $consumer.cleanup -ne $true -or $consumer.errors.Count -ne 0) {
+        throw 'Independent local import/edit/save/recipe/export/reopen validation is incomplete.'
+    }
+    $result.windows_local_file_workflow_verified = $true
 } finally {
     $result | ConvertTo-Json | Set-Content build-evidence/result.json
     Get-ChildItem .qt-archives,.ci-dependency-cache -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -in @('.zip','.7z','.gz','.xz','.bz2','.zst','.tar') } | ForEach-Object {

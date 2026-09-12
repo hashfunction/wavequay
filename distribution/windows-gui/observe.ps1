@@ -19,7 +19,8 @@ try {
         [System.Windows.Automation.AutomationElement].Assembly.Location,
         [System.Windows.Automation.ControlType].Assembly.Location,
         [System.Windows.Rect].Assembly.Location)
-    Add-Type -Path @((Join-Path $PSScriptRoot 'GuiProbe.cs'),(Join-Path $PSScriptRoot 'OnboardingInput.cs')) -ReferencedAssemblies $references
+    $sources = @('GuiProbe.cs','OnboardingInput.cs','ConsumerInput.cs','ConsumerDriver.cs','ConsumerProfile.cs','ConsumerTextReadback.cs') | ForEach-Object { Join-Path $PSScriptRoot $_ }
+    Add-Type -Path $sources -ReferencedAssemblies $references
     if ($SelfTest) {
         [WaveQuayQualification.GuiProbe]::SelfTest() | Set-Content -Encoding UTF8 (Join-Path $EvidenceDirectory 'gui-helper-self-test.json')
         Write-Output 'PASS: real Windows job cleanup and UIA interop fixture. This is not WaveWeft GUI qualification.'

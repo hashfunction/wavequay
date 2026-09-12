@@ -9,6 +9,10 @@
   <ItemGroup>
     <Compile Include="GuiProbe.cs" />
     <Compile Include="OnboardingInput.cs" />
+    <Compile Include="ConsumerInput.cs" />
+    <Compile Include="ConsumerDriver.cs" />
+    <Compile Include="ConsumerProfile.cs" />
+    <Compile Include="ConsumerTextReadback.cs" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Web.Extensions" />

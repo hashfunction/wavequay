@@ -10,6 +10,10 @@ Set-StrictMode -Version Latest
 if (-not $IsWindows -or $env:CI -ne 'true') { throw 'Requires a disposable Windows CI runner.' }
 $EvidenceDirectory = [IO.Path]::GetFullPath($EvidenceDirectory)
 New-Item -ItemType Directory -Force $EvidenceDirectory | Out-Null
+if (-not $SelfTest) {
+    & python (Join-Path $PSScriptRoot 'consumer_audio.py') prepare --evidence $EvidenceDirectory --source-commit $SourceCommit
+    if ($LASTEXITCODE -ne 0) { throw 'Could not exclusively prepare original consumer audio fixture.' }
+}
 $hostExecutable = Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
 $start = [Diagnostics.ProcessStartInfo]::new($hostExecutable)
 $start.UseShellExecute = $false
@@ -43,13 +47,16 @@ try {
     $stdout = $child.StandardOutput.ReadToEndAsync()
     $stderr = $child.StandardError.ReadToEndAsync()
     while (-not $child.WaitForExit(1000)) {
-        if ($clock.Elapsed.TotalSeconds -ge 180) {
+        # Original startup deadline remains 90s inside GuiProbe. The separate
+        # consumer driver has a 420s budget; allow bounded diagnostics/cleanup.
+        $observerBudget = if ($SelfTest) { 180 } else { 600 }
+        if ($clock.Elapsed.TotalSeconds -ge $observerBudget) {
             $timedOut = $true
             # The helper owns a KILL_ON_JOB_CLOSE job for WaveWeft. Also terminate
             # the exact helper process tree, including an assignment-failure race.
             $child.Kill($true)
             $child.WaitForExit()
-            throw 'GUI observer exceeded 180 seconds; owned helper/process tree stopped.'
+            throw "GUI observer exceeded $observerBudget seconds; owned helper/process tree stopped."
         }
     }
     if ($child.ExitCode -ne 0) { throw "GUI observer exited $($child.ExitCode); inspect retained evidence." }
@@ -68,6 +75,8 @@ try {
         # after the owned helper/process tree is stopped, even when it failed.
         & python (Join-Path $PSScriptRoot 'collect_application_logs.py') --report (Join-Path $EvidenceDirectory 'gui-observations.json')
         if ($LASTEXITCODE -ne 0) { Write-Warning 'Application log capture was incomplete; inspect application-logs.json.' }
+        & python (Join-Path $PSScriptRoot 'consumer_audio.py') finalize --evidence $EvidenceDirectory --source-commit $SourceCommit
+        if ($LASTEXITCODE -ne 0) { throw 'Consumer file/profile validation or owned cleanup failed; inspect consumer-validation.json.' }
     }
 }
 
