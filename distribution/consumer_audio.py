@@ -7,6 +7,7 @@ The original six-second stereo composition is dedicated to CC0 by Trieflow LLC.
 Output receipts are metadata; fixture WAV/project/profile payloads are not uploaded.
 """
 import argparse
+from contextlib import closing
 from functools import lru_cache
 import hashlib
 import json
@@ -155,7 +156,7 @@ def validate_project(path):
     info = digest(path)
     require(info['bytes'] > 4096, 'Saved project absent/empty')
     try:
-        with sqlite3.connect(path.as_uri() + '?mode=ro&immutable=1', uri=True) as database:
+        with closing(sqlite3.connect(path.as_uri() + '?mode=ro&immutable=1', uri=True)) as database:
             require(database.execute('PRAGMA integrity_check').fetchone() == ('ok',), 'Saved project integrity failed')
             require(database.execute('PRAGMA application_id').fetchone() == (0x41554459,), 'Saved file is not an Audacity project')
             project = database.execute('SELECT id,length(dict),length(doc) FROM project').fetchall()

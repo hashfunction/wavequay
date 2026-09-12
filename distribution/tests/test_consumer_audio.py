@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Independent file-policy fixtures; these are never product UI evidence."""
 import importlib.util
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -116,7 +117,7 @@ class ConsumerAudioTests(unittest.TestCase):
 
     def test_read_only_saved_project_checks_real_sqlite_structure(self):
         path = self.root / 'Dawn-thread.aup4'
-        with sqlite3.connect(path) as db:
+        with closing(sqlite3.connect(path)) as db, db:
             db.executescript('PRAGMA application_id=1096107097; CREATE TABLE project(id INTEGER,dict BLOB,doc BLOB);'
                              'CREATE TABLE sampleblocks(samples BLOB);')
             db.execute('INSERT INTO project VALUES(1,?,?)', (b'fixture dictionary', b'fixture document'))
@@ -124,7 +125,7 @@ class ConsumerAudioTests(unittest.TestCase):
         before = path.read_bytes()
         self.assertEqual(self.m.validate_project(path)['applicationId'], 'AUDY')
         self.assertEqual(path.read_bytes(), before)
-        with sqlite3.connect(path) as db:
+        with closing(sqlite3.connect(path)) as db, db:
             db.execute('DELETE FROM sampleblocks')
         with self.assertRaisesRegex(ValueError, 'audio blocks'):
             self.m.validate_project(path)
@@ -133,6 +134,43 @@ class ConsumerAudioTests(unittest.TestCase):
         path = self.exported(name='Dawn-thread.aup4')
         with self.assertRaisesRegex(ValueError, 'Invalid saved project'):
             self.m.validate_project(path)
+
+    def test_project_inspection_closes_connection_on_success_and_both_failures(self):
+        path = self.root / 'Dawn-thread.aup4'
+        connect = sqlite3.connect
+        for case in ('valid', 'wrong-application', 'invalid-database'):
+            with self.subTest(case=case):
+                if path.exists():
+                    path.unlink()
+                if case == 'invalid-database':
+                    path.write_bytes(b'not a database' * 1024)
+                else:
+                    with closing(connect(path)) as db, db:
+                        db.executescript('PRAGMA application_id=1096107097; CREATE TABLE project(id INTEGER,dict BLOB,doc BLOB);'
+                                         'CREATE TABLE sampleblocks(samples BLOB);')
+                        db.execute('INSERT INTO project VALUES(1,?,?)', (b'dictionary', b'document'))
+                        db.execute('INSERT INTO sampleblocks VALUES(?)', (bytes(self.m.FRAMES * 4),))
+                        if case == 'wrong-application':
+                            db.execute('PRAGMA application_id=7')
+                connections = []
+                def retain_connection(*args, **kwargs):
+                    connection = connect(*args, **kwargs)
+                    connections.append(connection)
+                    return connection
+                try:
+                    with patch.object(self.m.sqlite3, 'connect', side_effect=retain_connection):
+                        if case == 'valid':
+                            self.assertEqual(self.m.validate_project(path)['applicationId'], 'AUDY')
+                        else:
+                            with self.assertRaises(ValueError):
+                                self.m.validate_project(path)
+                    self.assertEqual(len(connections), 1)
+                    # Keep a strong reference: garbage collection must not own cleanup.
+                    with self.assertRaisesRegex(sqlite3.ProgrammingError, 'closed'):
+                        connections[0].execute('SELECT 1')
+                finally:
+                    for connection in connections:
+                        connection.close()
 
     def test_profile_marker_and_native_root_mapping_required(self):
         profile = self.root.parent / 'Audacity4'
