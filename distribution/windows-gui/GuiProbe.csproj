@@ -15,6 +15,7 @@
     <Compile Include="PrivateEnvironment.cs" />
     <Compile Include="PackageActivation.cs" />
     <Compile Include="ConsumerTextReadback.cs" />
+    <Compile Include="ConsumerTreeRead.cs" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Web.Extensions" />

@@ -16,6 +16,8 @@ namespace WaveQuayQualification
 {
     public static partial class GuiProbe
     {
+        public static bool TreeReadUnavailable(Exception error)
+        { return error is ElementNotAvailableException || (error is COMException && ((COMException)error).ErrorCode==unchecked((int)0x80004005)); }
         [StructLayout(LayoutKind.Sequential)] private struct ConsumerKey { public ushort Key, Scan; public uint Flags, Time; public UIntPtr Extra; }
         [StructLayout(LayoutKind.Explicit)] private struct ConsumerUnion
         { [FieldOffset(0)] public ConsumerKey Key; [FieldOffset(0)] public MouseInput Mouse; }
@@ -59,6 +61,10 @@ namespace WaveQuayQualification
             private readonly List<Dictionary<string,object>> textReadbacks=new List<Dictionary<string,object>>();
             private int transient;
             private ConsumerKeyboardSnapshot lastKeyboard;
+            private AutomationElement queryNode;
+            private readonly List<AutomationElement> queryParents=new List<AutomationElement>();
+            private string queryStep;
+            private int queryDepth,queryCount,treeReadProviderFailures;
             private string action="begin";
             public ConsumerSession(Process process, AutomationElement mainWindow, string directory, string title, string source, Action captureModules)
             {
@@ -104,23 +110,78 @@ namespace WaveQuayQualification
             }
             private void Enumerate(AutomationElement node,List<AutomationElement> nodes,int depth)
             {
-                Require(depth<=40 && nodes.Count<3000,"Consumer UI tree exceeds bound");nodes.Add(node);
+                Require(depth<=40 && nodes.Count<3000,"Consumer UI tree exceeds bound");nodes.Add(node);queryParents.Add(node);
                 var walker=TreeWalker.RawViewWalker;
-                for(var child=walker.GetFirstChild(node);child!=null;child=walker.GetNextSibling(child))Enumerate(child,nodes,depth+1);
+                QueryStep(node,depth,nodes.Count,"GetFirstChild");var child=walker.GetFirstChild(node);
+                while(child!=null)
+                {
+                    Enumerate(child,nodes,depth+1);
+                    QueryStep(child,depth+1,nodes.Count,"GetNextSibling");child=walker.GetNextSibling(child);
+                }
+                queryParents.RemoveAt(queryParents.Count-1);
             }
+            private void QueryStep(AutomationElement node,int depth,int count,string step)
+            { queryNode=node;queryDepth=depth;queryCount=count;queryStep=step; }
             private List<AutomationElement> Match(AutomationElement root,string name,ControlType role,bool prefix)
             {
-                var nodes=new List<AutomationElement>();Enumerate(root,nodes,0);
-                return nodes.FindAll(n=>n.Current.ProcessId==process.Id && n.Current.ControlType==role && n.Current.IsEnabled
-                    && !n.Current.IsOffscreen && (prefix?n.Current.Name.StartsWith(name,StringComparison.Ordinal):n.Current.Name==name));
+                queryParents.Clear();var nodes=new List<AutomationElement>();Enumerate(root,nodes,0);
+                return nodes.FindAll(n=>{
+                    QueryStep(n,0,nodes.Count,"ReadMatchProperties");
+                    return n.Current.ProcessId==process.Id && n.Current.ControlType==role && n.Current.IsEnabled
+                        && !n.Current.IsOffscreen && (prefix?n.Current.Name.StartsWith(name,StringComparison.Ordinal):n.Current.Name==name);
+                });
+            }
+            private static string DiagnosticText(string value,int limit)
+            { return value==null?null:(value.Length<=limit?value:value.Substring(0,limit)); }
+            private Dictionary<string,object> QueryNodeFacts(AutomationElement node)
+            {
+                var facts=D();
+                try
+                {
+                    var current=node.Current;
+                    facts["pid"]=current.ProcessId;facts["name"]=DiagnosticText(current.Name,512);
+                    facts["role"]=current.ControlType.ProgrammaticName;facts["className"]=DiagnosticText(current.ClassName,256);
+                    facts["automationId"]=DiagnosticText(current.AutomationId,512);facts["identity"]=Identity(node);
+                    facts["enabled"]=current.IsEnabled;facts["offscreen"]=current.IsOffscreen;facts["window"]=current.NativeWindowHandle;
+                }
+                catch(Exception error){facts["diagnosticError"]=DiagnosticText(error.ToString(),2000);}
+                return facts;
+            }
+            private void RecordTreeReadFailure(Exception error,string name,string role,IntPtr window)
+            {
+                var parents=new List<object>();foreach(var node in queryParents)parents.Add(QueryNodeFacts(node));
+                var failure=D("action",action,"targetName",name,"targetRole",role,"rootWindow",window.ToInt64(),
+                    "elapsedMs",clock.ElapsedMilliseconds,"step",queryStep,"depth",queryDepth,"visitedNodes",queryCount,
+                    "node",QueryNodeFacts(queryNode),"path",parents,"error",DiagnosticText(error.ToString(),4000));
+                if(treeReadProviderFailures==0)report["firstTreeReadFailure"]=failure;
+                report["lastTreeReadFailure"]=failure;report["treeReadProviderFailures"]=++treeReadProviderFailures;
+            }
+            private ConsumerTreeRoot TreeRoot(AutomationElement root)
+            {
+                var current=root.Current;var window=new IntPtr(current.NativeWindowHandle);
+                return new ConsumerTreeRoot{pid=current.ProcessId,nativePid=NativePid(window),window=window.ToInt64(),owned=Owned(window),
+                    role=current.ControlType.ProgrammaticName,name=current.Name,className=current.ClassName,identity=Identity(root),
+                    enabled=current.IsEnabled,offscreen=current.IsOffscreen};
             }
             private AutomationElement Target(AutomationElement root,string name,ControlType role,bool prefix)
             {
                 var wait=Stopwatch.StartNew();
-                while(wait.ElapsedMilliseconds<10000)
-                { Check();var targets=Match(root,name,role,prefix);Require(targets.Count<=1,"Ambiguous consumer control: "+name);
-                    if(targets.Count==1)return targets[0];Thread.Sleep(150); }
-                throw new TimeoutException("Exact consumer control absent: "+name+" / "+role.ProgrammaticName);
+                var retained=TreeRoot(root);var window=new IntPtr(retained.window);ConsumerTreeRead.RootStable(retained,retained);
+                Func<AutomationElement> requery=()=>{
+                    queryParents.Clear();QueryStep(root,0,0,"ReacquireRoot");
+                    var fresh=AutomationElement.FromHandle(window);QueryStep(fresh,0,0,"ReadRootProperties");
+                    ConsumerTreeRead.RootStable(retained,TreeRoot(fresh));
+                    return fresh;
+                };
+                return ConsumerTreeRead.Poll<AutomationElement>(()=>{
+                    var fresh=requery();var complete=Match(fresh,name,role,prefix);requery();return complete;
+                },()=>{Check();Require(NativePid(window)==process.Id && Owned(window),"Retained consumer observation root is not owned");},
+                ()=>wait.ElapsedMilliseconds,()=>Thread.Sleep(150),
+                TreeReadUnavailable,
+                error=>{
+                    try{RecordTreeReadFailure(error,name,role.ProgrammaticName,window);}
+                    catch(Exception diagnostic){report["treeReadDiagnosticError"]=DiagnosticText(diagnostic.ToString(),2000);}
+                },name+" / "+role.ProgrammaticName);
             }
             private ConsumerInputSnapshot Snapshot(AutomationElement root,AutomationElement target,int matches)
             {

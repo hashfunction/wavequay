@@ -22,9 +22,14 @@ try {
         [System.Windows.Automation.AutomationElement].Assembly.Location,
         [System.Windows.Automation.ControlType].Assembly.Location,
         [System.Windows.Rect].Assembly.Location)
-    $sources = @('GuiProbe.cs','OnboardingInput.cs','ConsumerInput.cs','ConsumerDriver.cs','ConsumerProfile.cs','PrivateEnvironment.cs','PackageActivation.cs','ConsumerTextReadback.cs') | ForEach-Object { Join-Path $PSScriptRoot $_ }
+    $sources = @('GuiProbe.cs','OnboardingInput.cs','ConsumerInput.cs','ConsumerDriver.cs','ConsumerProfile.cs','PrivateEnvironment.cs','PackageActivation.cs','ConsumerTextReadback.cs','ConsumerTreeRead.cs') | ForEach-Object { Join-Path $PSScriptRoot $_ }
+    if ($SelfTest) { $sources += Join-Path $PSScriptRoot 'ConsumerTreeReadTests.cs' }
     Add-Type -Path $sources -ReferencedAssemblies $references
     if ($SelfTest) {
+        [WaveQuayQualificationTests.ConsumerTreeReadTests]::Run()
+        [WaveQuayQualificationTests.ConsumerTreeReadTests]::RunProviderClassifier(
+            [Func[Exception,bool]] { param($providerException) [WaveQuayQualification.GuiProbe]::TreeReadUnavailable($providerException) },
+            [System.Windows.Automation.ElementNotAvailableException]::new('actual UIA exception fixture'))
         [WaveQuayQualification.GuiProbe]::SelfTest() | Set-Content -Encoding UTF8 (Join-Path $EvidenceDirectory 'gui-helper-self-test.json')
         Write-Output 'PASS: real Windows job cleanup and UIA interop fixture. This is not WaveWeft GUI qualification.'
         exit 0

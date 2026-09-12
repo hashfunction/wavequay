@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 from urllib.parse import urlsplit
 
 from files import file_record, inventory_tree, _checked_path, _regular_stream, _reject_link
@@ -121,9 +122,12 @@ def collect(root, build, stage, qt, source_commit):
             actual = file_record(archive)
             require(actual['sha256'] == locked['sha256'], 'Current prebuilt archive hash differs: ' + name)
             record['binaryArchive'] = dict(locked, bytes=actual['bytes'])
-            # Prefix membership is measured, but extraction equality must be
-            # independently proven from the retained original archive.
-            issues.append(name + ': archive-member comparison and source delivery pending')
+            from archive_members import verify_members
+            tool = shutil.which('cmake')
+            require(tool, 'Original native archive comparison requires the configured CMake tool')
+            record['archiveMembership'] = verify_members(archive, actual,
+                dict(record['resolvedNativeFiles'], **record['installedNotices']), Path(tool).resolve())
+            issues.append(name + ': original members verified; source/notice delivery pending')
         else:
             record['builtFromSource'] = True
             issues.append(name + ': current downloaded source/member and notice review pending')
