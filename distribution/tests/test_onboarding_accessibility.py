@@ -28,8 +28,14 @@ class OnboardingAccessibilityTests(unittest.TestCase):
         ) if path.is_file())
 
     def run_probe(self, *arguments):
-        result = subprocess.run([str(self.executable), *arguments],
-                                capture_output=True, text=True, timeout=30)
+        try:
+            result = subprocess.run([str(self.executable), *arguments],
+                                    capture_output=True, text=True, timeout=30)
+        except subprocess.TimeoutExpired as error:
+            def output_text(value):
+                return value.decode('utf-8', errors='replace') if isinstance(value, bytes) else (value or '')
+            self.fail('Onboarding runtime exceeded 30 seconds. Captured diagnostics:\n'
+                      + output_text(error.stdout) + output_text(error.stderr))
         output = result.stdout + result.stderr
         self.assertEqual(result.returncode, 0, output)
         self.assertIn("Onboarding accessibility runtime passed", output)

@@ -106,7 +106,9 @@ int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
     qputenv("QML_DISABLE_DISK_CACHE", "1");
+    qInfo() << "Onboarding probe: constructing QGuiApplication";
     QGuiApplication app(argc, argv);
+    qInfo() << "Onboarding probe: application constructed";
     QGuiApplication::setFont(QFont("Arial"));
     // Register early, then let Qt Quick install its own factory during startup.
     // The second process also tests the opposite initialization order.
@@ -117,6 +119,7 @@ int main(int argc, char** argv)
     QAccessible::installFactory(factory);
     QAccessible::installFactory(stockQuickFactory);
     QQmlEngine engine;
+    qInfo() << "Onboarding probe: QML engine constructed";
     QQuickView mainWindow(&engine, nullptr);
     QQuickView popup(&engine, nullptr);
     if (app.arguments().contains("--muse-factory-last")) {
@@ -146,6 +149,7 @@ int main(int argc, char** argv)
     modularity::globalIoc()->registerExport<au::appshell::IAppShellConfiguration>("test", configuration);
     ioc->registerExport<muse::IInteractive>("test", interactive);
     navigation->init();
+    qInfo() << "Onboarding probe: navigation initialized";
     accessibility->setAccessibilityEnabled(true);
     // Keep platform announcements inactive; provider state and focus lookup still run.
     QmlIoCContext iocContext(&engine); iocContext.ctx = ctx;
@@ -169,16 +173,19 @@ int main(int argc, char** argv)
     QQmlComponent component(&engine);
     component.setData("import Audacity.AppShell 1.0\nFirstLaunchSetupDialog {}", QUrl());
     QObject* dialog = component.create();
+    qInfo() << "Onboarding probe: dialog component created";
     if (!dialog) qCritical() << component.errors();
     require(dialog, "production onboarding QML loads");
     auto item = dialog->property("contentItem").value<QQuickItem*>();
     popup.setTransientParent(&mainWindow);
     popup.setContent(QUrl(), &component, item);
     mainWindow.show(); popup.show(); popup.requestActivate();
+    qInfo() << "Onboarding probe: offscreen views shown";
     process();
     QMetaObject::invokeMethod(dialog, "opened");
     process();
     auto windowInterface = QAccessible::queryAccessibleInterface(&popup);
+    qInfo() << "Onboarding probe: popup interface queried";
     require(dynamic_cast<AccessibleWindowInterface*>(windowInterface), "QQuickView must use the registered Muse window provider");
     qInfo() << "Muse QQuickView provider selected; Qt" << qVersion();
     auto model = qmlObject(dialog, "model");
@@ -232,6 +239,7 @@ int main(int argc, char** argv)
     require(completionWrites == 1, "completion is committed exactly once");
     require(testing::Mock::VerifyAndClearExpectations(configuration.get()), "configuration completion contract");
     delete dialog;
+    qInfo() << "Onboarding probe: dialog destroyed";
     accessibility->deinit();
     modularity::resetAll();
     qInfo() << "Onboarding accessibility runtime passed";
