@@ -43,6 +43,7 @@ try {
     & ./distribution/windows-gui/test_display_modes.ps1
     & ./distribution/windows-gui/test_consumer_input.ps1
     & ./distribution/windows-gui/test_consumer_menu.ps1
+    & ./distribution/windows-gui/test_consumer_encoding.ps1
     & ./distribution/windows-gui/test_consumer_text_readback.ps1
     & ./distribution/windows-gui/test_consumer_tree_read.ps1
     & ./distribution/windows-gui/test_private_environment.ps1

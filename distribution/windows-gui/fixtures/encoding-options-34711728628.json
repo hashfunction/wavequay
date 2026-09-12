@@ -1,0 +1,36 @@
+{
+  "original_sha256": "6398e2a556f43880fb69394ad7c31fbdba5756cd2206d0cf6399b44ef792d492",
+  "source_commit": "f7b46345e676e138745b371e362998e4c6f464f8",
+  "process_id": 3104,
+  "focus_names": [
+    "Signed 16-bit PCM",
+    "Signed 24-bit PCM",
+    "Signed 32-bit PCM",
+    "Unsigned 8-bit PCM",
+    "32-bit float",
+    "64-bit float",
+    "U-Law",
+    "A-Law",
+    "IMA ADPCM",
+    "Microsoft ADPCM",
+    "GSM 6.10",
+    "32kbs G721 ADPCM",
+    "16kbs NMS ADPCM",
+    "24kbs NMS ADPCM",
+    "32kbs NMS ADPCM"
+  ],
+  "failure_focus": {
+    "nativeAvailable": true,
+    "foreground": 918004,
+    "active": 918004,
+    "nativeFocus": 918004,
+    "uia": {
+      "pid": 3104,
+      "name": "Signed 16-bit PCM",
+      "role": "ControlType.ListItem",
+      "identity": "42,918004,4,-2147482833",
+      "enabled": true,
+      "offscreen": false
+    }
+  }
+}

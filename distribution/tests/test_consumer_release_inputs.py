@@ -19,7 +19,7 @@ class ConsumerReleaseInputTests(unittest.TestCase):
         action='import-local-wav';key([17,16,73]);picker();click('Clip: Dawn-thread')
         action='reverse-selected-audio';key([17,65]);click('Effect');rows.extend([dict(action=action,kind=kind) for kind in ('menu-hover','menu-click')])
         action='save-local-project';key([17,83]);picker()
-        action='configure-wav-recipe';key([17,16,69]);choice('Encoding ','Signed 16 bit PCM');click('Stereo','RadioButton');field('Folder: ');field('File name: ')
+        action='configure-wav-recipe';key([17,16,69]);choice('Encoding ','Signed 16-bit PCM');click('Stereo','RadioButton');field('Folder: ');field('File name: ')
         click('Save recipe');click('Recipe name','Edit');text();click('Save recipe')
         action='apply-saved-recipe';click('Mono','RadioButton');choice('Spoken-audio export recipe','Dawn thread stereo')
         action='export-reversed-wav';click('Export')
@@ -32,7 +32,7 @@ class ConsumerReleaseInputTests(unittest.TestCase):
     def test_optional_local_save_page_and_bounded_combo_navigation(self):
         rows=self.fixture();index=next(i for i,row in enumerate(rows) if row['action']=='save-local-project')+1
         rows.insert(index,dict(action='save-local-project',kind='click',before=dict(name='On your computer',role='Button')))
-        selected=next(i for i,row in enumerate(rows) if row.get('focusName')=='Signed 16 bit PCM')
+        selected=next(i for i,row in enumerate(rows) if row.get('focusName')=='Signed 16-bit PCM')
         for i in range(49):
             rows.insert(selected+i,dict(action='configure-wav-recipe',kind='keys',keys=[40],focusRole='ControlType.ListItem',
                 focusName='other option '+str(i),focusIdentity='other-item-'+str(i)))

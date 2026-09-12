@@ -69,7 +69,7 @@ def validate_action_groups(inputs):
         if len(rows)>1 and rows[1]['kind']=='click' and rows[1]['before']['name']=='On your computer':c('On your computer')
         picker()
     def configured(t,k,c,text,field,picker,choice,rows):
-        k([17,16,69]);choice('Encoding ','Signed 16 bit PCM');c('Stereo','RadioButton');field('Folder: ');field('File name: ')
+        k([17,16,69]);choice('Encoding ','Signed 16-bit PCM');c('Stereo','RadioButton');field('Folder: ');field('File name: ')
         c('Save recipe');c('Recipe name','Edit');text();c('Save recipe')
     def applied(t,k,c,text,field,picker,choice,rows):c('Mono','RadioButton');choice('Spoken-audio export recipe','Dawn thread stereo')
     def exported(t,k,c,text,field,picker,choice,rows):c('Export')

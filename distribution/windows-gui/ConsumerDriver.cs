@@ -518,7 +518,7 @@ namespace WaveQuayQualification
             private void Settings(AutomationElement root)
             {
                 Target(root,"Format: WAV (Microsoft)",ControlType.ComboBox,false);
-                Choose(root,"Encoding ","Signed 16 bit PCM");
+                Choose(root,"Encoding ","Signed 16-bit PCM");
                 // ExportDialog.qml currently labels the sample-rate dropdown
                 // with formatLabel.text. The numeric current value disambiguates it.
                 Target(root,"Format: 44100",ControlType.ComboBox,false);
