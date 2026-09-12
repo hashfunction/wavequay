@@ -1,0 +1,299 @@
+{
+  "original_sha256": "bbef133026c6d994f2db37130f40a0f25012a95184306aa713036b2789dd7e2a",
+  "source_commit": "02a8dbae9d0937bb535b33502502729734de97cb",
+  "run_id": 34723127574,
+  "process_id": 3544,
+  "window_title": "Export audio",
+  "window_handle": 786932,
+  "controls": [
+    {
+      "name": "Close",
+      "automationId": "Close",
+      "controlType": "Button",
+      "className": "",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": true,
+      "bounds": [
+        1257,
+        178,
+        34,
+        30
+      ]
+    },
+    {
+      "name": "Export",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "Button",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        1110,
+        874,
+        80,
+        30
+      ]
+    },
+    {
+      "name": "Cancel",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "Button",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        1198,
+        874,
+        80,
+        30
+      ]
+    },
+    {
+      "name": "Edit metadata",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "Button",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        666,
+        874,
+        132,
+        30
+      ]
+    },
+    {
+      "name": "Format: 44100 Hz",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "ComboBox",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        815,
+        691,
+        236,
+        30
+      ]
+    },
+    {
+      "name": "Custom mapping",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "RadioButton",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        956,
+        663,
+        118,
+        20
+      ]
+    },
+    {
+      "name": "Stereo",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "RadioButton",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        885,
+        663,
+        61,
+        20
+      ]
+    },
+    {
+      "name": "Mono",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "RadioButton",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        815,
+        663,
+        60,
+        20
+      ]
+    },
+    {
+      "name": "Encoding Signed 16-bit PCM",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "ComboBox",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        815,
+        729,
+        236,
+        30
+      ]
+    },
+    {
+      "name": "Format: WAV (Microsoft)",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "ComboBox",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        815,
+        566,
+        236,
+        30
+      ]
+    },
+    {
+      "name": "Browse",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "Button",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        1181,
+        528,
+        87,
+        30
+      ]
+    },
+    {
+      "name": "Folder: D:/a/wavequay/wavequay/build-evidence/gui/private-environment/Documents/Audacity4",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "Edit",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        815,
+        528,
+        358,
+        30
+      ]
+    },
+    {
+      "name": "File name: Dawn-thread",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "Edit",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        815,
+        490,
+        358,
+        30
+      ]
+    },
+    {
+      "name": "Type: Export full project audio",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "ComboBox",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        815,
+        393,
+        358,
+        30
+      ]
+    },
+    {
+      "name": "Manage recipes",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "Button",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        807,
+        296,
+        132,
+        30
+      ]
+    },
+    {
+      "name": "Save recipe",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "Button",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        670,
+        296,
+        132,
+        30
+      ]
+    },
+    {
+      "name": "Spoken-audio export recipe",
+      "automationId": "muse::accessibility::AccessibleAppRootObject.DialogView_WindowView_QQuickView.AccessibleObject.AccessibleObject",
+      "controlType": "ComboBox",
+      "className": "muse::accessibility::AccessibleObject",
+      "processId": 3544,
+      "enabled": true,
+      "nativeWindowHandle": 0,
+      "offscreen": false,
+      "invoke": false,
+      "bounds": [
+        670,
+        258,
+        126,
+        30
+      ]
+    }
+  ]
+}

@@ -520,8 +520,8 @@ namespace WaveQuayQualification
                 Target(root,"Format: WAV (Microsoft)",ControlType.ComboBox,false);
                 Choose(root,"Encoding ","Signed 16-bit PCM");
                 // ExportDialog.qml currently labels the sample-rate dropdown
-                // with formatLabel.text. The numeric current value disambiguates it.
-                Target(root,"Format: 44100",ControlType.ComboBox,false);
+                // with formatLabel.text; the model includes the Hz suffix.
+                Target(root,"Format: 44100 Hz",ControlType.ComboBox,false);
                 Click(root,"Stereo",ControlType.RadioButton);
                 Field(root,"Folder: ",fixture);
             }
