@@ -11,6 +11,14 @@ uses the pinned Muse utfcpp dependency, and uses either the workflow's existing
 `.ci-googletest` checkout or an installed GTest CMake package. It opens only
 offscreen Quick views and does not write a user profile.
 
+Each process retains the 30-second runtime limit. The launcher forces Qt's
+early messages onto stderr; the executable then gives Muse's real logger a
+fixture-only, immediately flushed stderr destination. Qt and Muse can otherwise
+send Windows messages to `OutputDebugString`, outside the subprocess pipes.
+Both executions require every startup/teardown checkpoint on the captured
+stderr stream, including messages after Muse takes over Qt logging. Timeouts
+still fail and report all captured output.
+
 ## Production boundary exercised
 
 The executable compiles the real `FirstLaunchSetupModel`, Muse accessible

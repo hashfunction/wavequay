@@ -1,5 +1,6 @@
 """Exercise the real onboarding model/QML and Muse accessibility/navigation providers."""
 from pathlib import Path
+import os
 import subprocess
 import tempfile
 import unittest
@@ -28,9 +29,13 @@ class OnboardingAccessibilityTests(unittest.TestCase):
         ) if path.is_file())
 
     def run_probe(self, *arguments):
+        environment = os.environ.copy()
+        # Windows Qt otherwise chooses OutputDebugString when CI has no console.
+        environment["QT_FORCE_STDERR_LOGGING"] = "1"
         try:
             result = subprocess.run([str(self.executable), *arguments],
-                                    capture_output=True, text=True, timeout=30)
+                                    capture_output=True, text=True, timeout=30,
+                                    env=environment)
         except subprocess.TimeoutExpired as error:
             def output_text(value):
                 return value.decode('utf-8', errors='replace') if isinstance(value, bytes) else (value or '')
@@ -39,6 +44,20 @@ class OnboardingAccessibilityTests(unittest.TestCase):
         output = result.stdout + result.stderr
         self.assertEqual(result.returncode, 0, output)
         self.assertIn("Onboarding accessibility runtime passed", output)
+        # Exercise redirected output before and after Muse takes over Qt logging.
+        # These checkpoints must survive the same pipes used on timeout in CI.
+        for checkpoint in (
+            "Onboarding probe: constructing QGuiApplication",
+            "Onboarding probe: application constructed",
+            "Onboarding probe: QML engine constructed",
+            "Onboarding probe: navigation initialized",
+            "Onboarding probe: dialog component created",
+            "Onboarding probe: offscreen views shown",
+            "Onboarding probe: popup interface queried",
+            "Onboarding probe: dialog destroyed",
+            "Onboarding accessibility runtime passed",
+        ):
+            self.assertIn(checkpoint, result.stderr, output)
         self.assertNotIn("TypeError", output)
         self.assertNotIn("ReferenceError", output)
 

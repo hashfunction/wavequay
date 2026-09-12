@@ -14,7 +14,9 @@
 #include <QtQuick/private/qaccessiblequickview_p.h>
 #include <QtQuick/private/qaccessiblequickitem_p.h>
 #include <QtQuick/private/qquickitem_p.h>
+#include <cstdio>
 #include <memory>
+#include "logger.h"
 #include "accessibility/internal/accessibilitycontroller.h"
 #include "accessibility/internal/accessibleapprootobject.h"
 #include "accessibility/internal/accessiblewindowinterface.h"
@@ -37,6 +39,22 @@
 
 using namespace muse;
 using namespace muse::accessibility;
+// Muse installs its own Qt message handler. Its normal Windows console sink
+// uses OutputDebugString even with QT_FORCE_STDERR_LOGGING, so the fixture must
+// retain messages in the parent's captured pipe after that handover as well.
+class ProbeStderrLogDest final : public kors::logger::LogDest
+{
+public:
+    ProbeStderrLogDest() : LogDest(kors::logger::LogLayout("${message}")) {}
+    std::string name() const override { return "OnboardingProbeStderr"; }
+    void write(const kors::logger::LogMsg& message) override
+    {
+        const auto output = m_layout.output(message);
+        std::fwrite(output.data(), 1, output.size(), stderr);
+        std::fputc('\n', stderr);
+        std::fflush(stderr);
+    }
+};
 static QAccessibleInterfaceRegister registry;
 // The same getter-then-stub dispatch used by AccessibilityModule's factory.
 static QAccessibleInterface* factory(const QString& name, QObject* object)
@@ -109,6 +127,9 @@ int main(int argc, char** argv)
     qInfo() << "Onboarding probe: constructing QGuiApplication";
     QGuiApplication app(argc, argv);
     qInfo() << "Onboarding probe: application constructed";
+    auto logger = kors::logger::Logger::instance();
+    logger->clearDests();
+    logger->addDest(new ProbeStderrLogDest());
     QGuiApplication::setFont(QFont("Arial"));
     // Register early, then let Qt Quick install its own factory during startup.
     // The second process also tests the opposite initialization order.
