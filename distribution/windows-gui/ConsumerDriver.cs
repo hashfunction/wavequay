@@ -278,8 +278,10 @@ namespace WaveQuayQualification
             }
             private string TextValue(AutomationElement target)
             {
-                object value;if(target.TryGetCurrentPattern(ValuePattern.Pattern,out value))return ((ValuePattern)value).Current.Value;
-                if(target.TryGetCurrentPattern(TextPattern.Pattern,out value))return ((TextPattern)value).DocumentRange.GetText(4096).TrimEnd('\r','\n');
+                // Muse exposes actual editable content through TextInterface; Qt also
+                // advertises ValuePattern, whose generic Value is empty for these edits.
+                object value;if(target.TryGetCurrentPattern(TextPattern.Pattern,out value))return ((TextPattern)value).DocumentRange.GetText(4096).TrimEnd('\r','\n');
+                if(target.TryGetCurrentPattern(ValuePattern.Pattern,out value))return ((ValuePattern)value).Current.Value;
                 throw new InvalidOperationException("No independent UI text readback for target");
             }
             private void ConfirmText(AutomationElement root,AutomationElement target,string expected,IntPtr nativeEdit)

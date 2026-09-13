@@ -226,6 +226,26 @@ int main(int argc, char** argv)
     navigation->init();
     qInfo() << "Onboarding probe: navigation initialized";
     accessibility->setAccessibilityEnabled(true);
+    // Qt Windows exposes ValuePattern even without a QAccessibleValueInterface.
+    // Muse's actual editable content is supplied by its text interface instead.
+    {
+        ui::AccessibleItem edit(ctx);
+        edit.setRole(ui::MUAccessible::EditableText);
+        edit.setName("field label is not its text");
+        AccessibleObject object(&edit);
+        auto provider = QAccessible::queryAccessibleInterface(&object);
+        require(provider && provider->role() == QAccessible::EditableText && provider->textInterface(),
+                "actual Muse edit exposes its text interface");
+        for (const auto& text : {QStringLiteral("D:\\a\\wavequay\\wavequay\\build-evidence\\gui\\consumer-fixture"),
+                                QStringLiteral("reversed"), QStringLiteral("Dawn thread stereo")}) {
+            edit.setText(text); // The same property bound to valueInput.text by production TextInputField.qml.
+            auto content = provider->textInterface();
+            require(provider->text(QAccessible::Value).isEmpty(), "Muse generic Value remains distinct from editable text");
+            require(content->characterCount() == text.size() && content->text(0, content->characterCount()) == text,
+                    "actual Muse text interface returns the complete current Folder, filename and recipe text");
+        }
+        qInfo() << "Muse editable text interface passed; generic Value is empty";
+    }
     // Keep platform announcements inactive; provider state and focus lookup still run.
     QmlIoCContext iocContext(&engine); iocContext.ctx = ctx;
     engine.rootContext()->setContextProperty("ioc_context", &iocContext);

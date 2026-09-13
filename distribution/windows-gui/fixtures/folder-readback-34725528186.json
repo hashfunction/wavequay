@@ -1,0 +1,157 @@
+{
+  "original_sha256": "97f6c8341ac1fa3898f6d5b1ab3f12c47eca14e01d9793b27af43578c9494b2c",
+  "source_commit": "f55ce1db2c1ea924b3f9eb1c44b304b9ded8fe50",
+  "run_id": 34725528186,
+  "process_id": 5208,
+  "primary_errors": [
+    "System.TimeoutException: Queued control text did not converge within five seconds\r\n   at WaveQuayQualification.ConsumerTextReadback.Converge(String expected, Func`2 read, Action guard, Func`1 clock, Action`1 wait, Action`1 observe)\r\n   at WaveQuayQualification.GuiProbe.ConsumerSession.ConfirmText(AutomationElement root, AutomationElement target, String expected, IntPtr nativeEdit)\r\n   at WaveQuayQualification.GuiProbe.ConsumerSession.Field(AutomationElement root, String prefix, String text)\r\n   at WaveQuayQualification.GuiProbe.ConsumerSession.Run()"
+  ],
+  "readback": {
+    "action": "configure-wav-recipe",
+    "kind": "uia-value-or-text",
+    "targetIdentity": "42,262594,4,-2147482862",
+    "window": 262594,
+    "control": 0,
+    "expected": "D:\\a\\wavequay\\wavequay\\build-evidence\\gui\\consumer-fixture",
+    "confirmed": false
+  },
+  "read_count": 77,
+  "first_read": {
+    "packet": null,
+    "completed": true,
+    "copied": 0,
+    "error": 0,
+    "value": "",
+    "matched": false,
+    "before": {
+      "pid": 5208,
+      "foregroundPid": 5208,
+      "nativeFocusPid": 5208,
+      "uiaFocusPid": 5208,
+      "window": 262594,
+      "main": 262238,
+      "foreground": 262594,
+      "active": 262594,
+      "nativeFocus": 262594,
+      "nativeFocusRoot": 262594,
+      "owned": true,
+      "enabled": true,
+      "offscreen": false,
+      "expectedTargetContainsFocus": true,
+      "identity": "42,262594,4,-2147482862",
+      "title": "Export audio",
+      "windowBounds": [
+        646,
+        177,
+        652,
+        747
+      ],
+      "desktopBounds": [
+        0,
+        0,
+        1920,
+        1080
+      ]
+    },
+    "final": {
+      "pid": 5208,
+      "foregroundPid": 5208,
+      "nativeFocusPid": 5208,
+      "uiaFocusPid": 5208,
+      "window": 262594,
+      "main": 262238,
+      "foreground": 262594,
+      "active": 262594,
+      "nativeFocus": 262594,
+      "nativeFocusRoot": 262594,
+      "owned": true,
+      "enabled": true,
+      "offscreen": false,
+      "expectedTargetContainsFocus": true,
+      "identity": "42,262594,4,-2147482862",
+      "title": "Export audio",
+      "windowBounds": [
+        646,
+        177,
+        652,
+        747
+      ],
+      "desktopBounds": [
+        0,
+        0,
+        1920,
+        1080
+      ]
+    },
+    "elapsedMs": 15
+  },
+  "last_read": {
+    "packet": null,
+    "completed": true,
+    "copied": 0,
+    "error": 0,
+    "value": "",
+    "matched": false,
+    "before": {
+      "pid": 5208,
+      "foregroundPid": 5208,
+      "nativeFocusPid": 5208,
+      "uiaFocusPid": 5208,
+      "window": 262594,
+      "main": 262238,
+      "foreground": 262594,
+      "active": 262594,
+      "nativeFocus": 262594,
+      "nativeFocusRoot": 262594,
+      "owned": true,
+      "enabled": true,
+      "offscreen": false,
+      "expectedTargetContainsFocus": true,
+      "identity": "42,262594,4,-2147482862",
+      "title": "Export audio",
+      "windowBounds": [
+        646,
+        177,
+        652,
+        747
+      ],
+      "desktopBounds": [
+        0,
+        0,
+        1920,
+        1080
+      ]
+    },
+    "final": {
+      "pid": 5208,
+      "foregroundPid": 5208,
+      "nativeFocusPid": 5208,
+      "uiaFocusPid": 5208,
+      "window": 262594,
+      "main": 262238,
+      "foreground": 262594,
+      "active": 262594,
+      "nativeFocus": 262594,
+      "nativeFocusRoot": 262594,
+      "owned": true,
+      "enabled": true,
+      "offscreen": false,
+      "expectedTargetContainsFocus": true,
+      "identity": "42,262594,4,-2147482862",
+      "title": "Export audio",
+      "windowBounds": [
+        646,
+        177,
+        652,
+        747
+      ],
+      "desktopBounds": [
+        0,
+        0,
+        1920,
+        1080
+      ]
+    },
+    "elapsedMs": 4979
+  }
+}
