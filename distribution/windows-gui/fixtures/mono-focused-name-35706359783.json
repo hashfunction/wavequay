@@ -1,0 +1,14 @@
+{
+  "artifact_id": 10685238591,
+  "artifact_sha256": "76c197a6975aca3f6413dd928ffba1b85aaa1e89791f636162330514e5142f0d",
+  "run_id": 35706359783,
+  "source_commit": "47db1bd020d97637200441a47fce3f064342b3e8",
+  "action": "apply-saved-recipe",
+  "requested_name": "Mono",
+  "requested_role": "RadioButton",
+  "recipe_saved_tree_name": "Mono",
+  "focused_name": "Audio options panel, Mono",
+  "focused_identity": "42,590426,4,-2147482866",
+  "window": 590426,
+  "error": "Exact consumer control absent or incomplete within original 10 second budget: Mono / ControlType.RadioButton"
+}

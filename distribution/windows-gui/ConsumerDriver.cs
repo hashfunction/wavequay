@@ -586,7 +586,7 @@ namespace WaveQuayQualification
                     Click(root,"Save recipe",ControlType.Button);var save=Window("Save export recipe",false);
                     var name=Click(save,"Recipe name",ControlType.Edit);Type(save,name,"Dawn thread stereo");ConfirmText(save,name,"Dawn thread stereo",IntPtr.Zero);
                     Click(save,"Save recipe",ControlType.Button);root=Window("Export audio",false);Observe("recipe-saved",root);
-                    action="apply-saved-recipe";Click(root,"Mono",ControlType.RadioButton);RequireSelected(Target(root,"Mono",ControlType.RadioButton,false));
+                    action="apply-saved-recipe";SelectRadio(root,"Mono");
                     report["recipeMonoBeforeApply"]=true;
                     Choose(root,"Spoken-audio export recipe","Dawn thread stereo");RequireSelected(Target(root,"Stereo",ControlType.RadioButton,false));report["recipeStereoAfterApply"]=true;Observe("recipe-applied",root);
                     action="export-reversed-wav";ExportNew(root,"reversed.wav");Observe("exported",Main());
@@ -619,6 +619,18 @@ namespace WaveQuayQualification
             {
                 object pattern;Require(radio.TryGetCurrentPattern(SelectionItemPattern.Pattern,out pattern)
                     && ((SelectionItemPattern)pattern).Current.IsSelected,"Actual radio selection state is not proved");
+            }
+            private void SelectRadio(AutomationElement root,string name)
+            {
+                // Retain the exact element whose click was guarded. Muse adds
+                // section context to the focused provider's accessible name,
+                // so re-querying its pre-focus name can no longer find it.
+                var radio=Click(root,name,ControlType.RadioButton);var window=new IntPtr(root.Current.NativeWindowHandle);
+                Require(Owned(window) && root.Current.ProcessId==process.Id && radio.Current.ProcessId==process.Id
+                    && radio.Current.ClassName=="muse::accessibility::AccessibleObject" && radio.Current.NativeWindowHandle==0
+                    && radio.Current.ControlType==ControlType.RadioButton && radio.Current.IsEnabled && !radio.Current.IsOffscreen,
+                    "Selected radio provider identity/ownership changed");
+                RequireSelected(radio);
             }
         }
         private static bool RunConsumer(Process process,AutomationElement main,string directory,string title,string source,Dictionary<string,object> startup)
