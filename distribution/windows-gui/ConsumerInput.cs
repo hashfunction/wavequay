@@ -35,6 +35,31 @@ namespace WaveQuayQualification
         public bool popupEnabled, popupVisible, targetInPopup;
         public ConsumerMenuOwner[] owners;
     }
+    // This distinct exception is emitted only after every other keyboard guard
+    // succeeds. It never authorizes input; a caller may only wait read-only.
+    public sealed class ConsumerTargetFocusPendingException : InvalidOperationException
+    { public ConsumerTargetFocusPendingException() : base("Consumer keyboard ownership/focus differs") {} }
+    public static class ConsumerFocusConvergence
+    {
+        public static string Read(Func<string> read,Func<long> clock,Action<int> wait,Action<int,long,Exception> observe)
+        {
+            long start=clock();ConsumerTargetFocusPendingException first=null;
+            for(int attempt=1;attempt<=41;attempt++)
+            {
+                long elapsed=clock()-start;
+                if(elapsed<0 || elapsed>=1000)break;
+                string result=null;ConsumerTargetFocusPendingException pending=null;
+                try { result=read(); }
+                catch(ConsumerTargetFocusPendingException error) { pending=error;if(first==null)first=error; }
+                elapsed=clock()-start;observe(attempt,elapsed,pending);
+                if(elapsed<0 || elapsed>=1000)break;
+                if(pending==null)return result;
+                wait((int)Math.Min(25,1000-elapsed));
+            }
+            if(first!=null)System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(first).Throw();
+            throw new TimeoutException("Exact typing focus was not observed within one second");
+        }
+    }
     public static class ConsumerInput
     {
         public static bool FilenameChain(ConsumerFilenameNode[] nodes,int pid,long dialog,long edit)
@@ -122,9 +147,10 @@ namespace WaveQuayQualification
         {
             Require(s!=null && pid>0 && main!=0 && window!=0 && s.pid==pid && s.foregroundPid==pid && s.nativeFocusPid==pid && s.uiaFocusPid==pid
                 && s.main==main && s.window==window && s.foreground==window && s.active==window && s.nativeFocusRoot==window && s.nativeFocus!=0
-                && s.owned && s.enabled && !s.offscreen && s.expectedTargetContainsFocus && !String.IsNullOrEmpty(s.identity) && !String.IsNullOrEmpty(s.title),
+                && s.owned && s.enabled && !s.offscreen && !String.IsNullOrEmpty(s.identity) && !String.IsNullOrEmpty(s.title),
                 "Consumer keyboard ownership/focus differs");
             Require(Rect(s.windowBounds) && Rect(s.desktopBounds) && Contains(s.desktopBounds,s.windowBounds), "Consumer keyboard window clipped/invalid");
+            if(!s.expectedTargetContainsFocus)throw new ConsumerTargetFocusPendingException();
         }
         public static void KeyboardStable(ConsumerKeyboardSnapshot a,ConsumerKeyboardSnapshot b,int pid,long main,long window)
         {

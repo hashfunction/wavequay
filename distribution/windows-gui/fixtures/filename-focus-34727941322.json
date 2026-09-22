@@ -1,0 +1,103 @@
+{
+  "original_sha256": "2229ef1a8b681f420fef7e3b41270778b9c0b7fa63977364c1d73505b06b49cc",
+  "source_commit": "65439bb8fac0778ff1832898480bdc2ac90f5dd0",
+  "run_id": 34727941322,
+  "primary_errors": [
+    "System.InvalidOperationException: Consumer keyboard ownership/focus differs\r\n   at WaveQuayQualification.ConsumerInput.Keyboard(ConsumerKeyboardSnapshot s, Int32 pid, Int64 main, Int64 window)\r\n   at WaveQuayQualification.GuiProbe.ConsumerSession.Focus(AutomationElement root, AutomationElement expected)\r\n   at WaveQuayQualification.GuiProbe.ConsumerSession.Type(AutomationElement root, AutomationElement target, String text)\r\n   at WaveQuayQualification.GuiProbe.ConsumerSession.Field(AutomationElement root, String prefix, String text)\r\n   at WaveQuayQualification.GuiProbe.ConsumerSession.Run()"
+  ],
+  "last_keys": {
+    "action": "configure-wav-recipe",
+    "kind": "keys",
+    "keys": [
+      17,
+      65
+    ],
+    "focusIdentity": "42,655770,4,-2147482860|655770|Export audio",
+    "focusName": "File panel, File name: Dawn-thread",
+    "focusRole": "ControlType.Edit",
+    "window": 655770,
+    "before": {
+      "pid": 2800,
+      "foregroundPid": 2800,
+      "nativeFocusPid": 2800,
+      "uiaFocusPid": 2800,
+      "window": 655770,
+      "main": 262212,
+      "foreground": 655770,
+      "active": 655770,
+      "nativeFocus": 655770,
+      "nativeFocusRoot": 655770,
+      "owned": true,
+      "enabled": true,
+      "offscreen": false,
+      "expectedTargetContainsFocus": true,
+      "identity": "42,655770,4,-2147482860",
+      "title": "Export audio",
+      "windowBounds": [
+        646,
+        177,
+        652,
+        747
+      ],
+      "desktopBounds": [
+        0,
+        0,
+        1920,
+        1080
+      ]
+    },
+    "final": {
+      "pid": 2800,
+      "foregroundPid": 2800,
+      "nativeFocusPid": 2800,
+      "uiaFocusPid": 2800,
+      "window": 655770,
+      "main": 262212,
+      "foreground": 655770,
+      "active": 655770,
+      "nativeFocus": 655770,
+      "nativeFocusRoot": 655770,
+      "owned": true,
+      "enabled": true,
+      "offscreen": false,
+      "expectedTargetContainsFocus": true,
+      "identity": "42,655770,4,-2147482860",
+      "title": "Export audio",
+      "windowBounds": [
+        646,
+        177,
+        652,
+        747
+      ],
+      "desktopBounds": [
+        0,
+        0,
+        1920,
+        1080
+      ]
+    },
+    "sent": 4,
+    "expected": 4
+  },
+  "failure_focus": {
+    "nativeAvailable": true,
+    "foreground": 655770,
+    "active": 655770,
+    "nativeFocus": 655770,
+    "uia": {
+      "pid": 2800,
+      "name": "Format: WAV (Microsoft)",
+      "role": "ControlType.ComboBox",
+      "identity": "42,655770,4,-2147482864",
+      "enabled": true,
+      "offscreen": false
+    }
+  },
+  "screenshot": {
+    "path": "consumer-failure.png",
+    "sha256": "cdff3304343f42ca2fad32fb8913be3384a116bd490be8d696d5e32f82d7e058",
+    "width": 652,
+    "height": 747,
+    "sampledColors": 503
+  }
+}

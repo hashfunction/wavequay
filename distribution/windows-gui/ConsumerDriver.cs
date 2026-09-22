@@ -259,20 +259,56 @@ namespace WaveQuayQualification
                 }
                 Require(sent==sequence.Count,"Partial consumer keyboard input");Thread.Sleep(150);
             }
+            private readonly List<Dictionary<string,object>> typingFocusWaits=new List<Dictionary<string,object>>();
+            private string TypingFocus(AutomationElement root,AutomationElement target,string targetIdentity,long nativeFocus,int characterIndex,bool museInput)
+            {
+                // Only the observed Muse edit provider has the source-defined 80ms
+                // announcement focus. Native pickers keep their original immediate guard.
+                if(!museInput)return Focus(root,target);
+                var timer=Stopwatch.StartNew();Dictionary<string,object> record=null;
+                var reads=new List<Dictionary<string,object>>();
+                return ConsumerFocusConvergence.Read(()=>{
+                    Check();Require(target.Current.ProcessId==process.Id && Identity(target)==targetIdentity
+                        && target.Current.ClassName=="muse::accessibility::AccessibleObject" && target.Current.NativeWindowHandle==0
+                        && target.Current.ControlType==ControlType.Edit && target.Current.IsEnabled && !target.Current.IsOffscreen,
+                        "Retained Muse typing target changed");
+                    string observed;
+                    try { observed=Focus(root,target); }
+                    catch(ConsumerTargetFocusPendingException)
+                    {
+                        Require(lastKeyboard.nativeFocus==nativeFocus,"Native typing focus changed during accessibility announcement");
+                        throw;
+                    }
+                    Require(lastKeyboard.identity==targetIdentity && lastKeyboard.nativeFocus==nativeFocus,
+                        "Restored typing focus differs from exact retained target");
+                    return observed;
+                },()=>timer.ElapsedMilliseconds,ms=>Thread.Sleep(ms),(attempt,elapsed,error)=>{
+                    if(record==null && error==null)return;
+                    if(record==null)
+                    {
+                        record=D("action",action,"targetIdentity",targetIdentity,"window",root.Current.NativeWindowHandle,
+                            "nativeFocus",nativeFocus,"characterIndex",characterIndex,"firstError",error.ToString(),"reads",reads);
+                        typingFocusWaits.Add(record);report["typingFocusWaits"]=typingFocusWaits;
+                    }
+                    reads.Add(D("attempt",attempt,"elapsedMs",elapsed,"exactTargetObserved",error==null,"withinDeadline",elapsed>=0 && elapsed<1000,"focus",lastKeyboard));
+                });
+            }
             private void Type(AutomationElement root,AutomationElement target,string text)
             {
+                string targetIdentity=Identity(target);bool museInput=target.Current.ClassName=="muse::accessibility::AccessibleObject";
                 Keys(root,target,0x11,0x41);
+                long nativeFocus=lastKeyboard.nativeFocus;int characterIndex=0;
                 foreach(char c in text)
                 {
-                    string before=Focus(root,target);var beforeOwnership=lastKeyboard;var pair=new[]{new ConsumerNativeInput{Type=1,Value=new ConsumerUnion{Key=new ConsumerKey{Scan=c,Flags=4}}},
+                    string before=TypingFocus(root,target,targetIdentity,nativeFocus,characterIndex,museInput);var beforeOwnership=lastKeyboard;var pair=new[]{new ConsumerNativeInput{Type=1,Value=new ConsumerUnion{Key=new ConsumerKey{Scan=c,Flags=4}}},
                         new ConsumerNativeInput{Type=1,Value=new ConsumerUnion{Key=new ConsumerKey{Scan=c,Flags=6}}}};
-                    Require(Focus(root,target)==before,"Consumer text target changed");
+                    Require(TypingFocus(root,target,targetIdentity,nativeFocus,characterIndex,museInput)==before,"Consumer text target changed");
                     ConsumerInput.KeyboardStable(beforeOwnership,lastKeyboard,process.Id,main.ToInt64(),root.Current.NativeWindowHandle);
                     uint sent=ConsumerSendInput(2,pair,Marshal.SizeOf(typeof(ConsumerNativeInput)));
                     if(sent==1)
                     { try{Require(Focus(root,target)==before,"Partial Unicode release lost original focus");report["partialUnicodeReleaseSent"]=ConsumerSendInput(1,new[]{pair[1]},Marshal.SizeOf(typeof(ConsumerNativeInput)));}
                         catch(Exception error){report["partialUnicodeReleaseRefused"]=error.Message;} }
-                    Require(sent==2,"Partial consumer Unicode input");
+                    Require(sent==2,"Partial consumer Unicode input");characterIndex++;
                 }
                 inputs.Add(D("action",action,"kind","unicode","characters",text.Length,"guardedCharacters",text.Length,"targetIdentity",Identity(target),"window",root.Current.NativeWindowHandle,"final",lastKeyboard));Write();
             }

@@ -76,3 +76,5 @@ foreach($factory in @('LegacyFilename','ModernFilename')) {
 }
 if([WaveQuayQualification.ConsumerInput]::FilenameChain(@((FilenameNode 131644 131666 1148 Edit)),7644,131666,131644)){throw 'Unobserved direct 1148 route accepted'}
 Write-Output 'PASS: two observed filename chains, 40 per-node mutations, two null ancestors and direct 1148 rejection; Wave still needs live ownership proof.'
+
+& (Join-Path $PSScriptRoot "test_consumer_typing_focus.ps1")

@@ -146,6 +146,60 @@ static QObject* qmlObject(QObject* root, const QString& id)
     return nullptr;
 }
 #include "recipe_dialog_accessibility_tests.h"
+// Exercise Muse's original name-change announcement route without native input.
+static void revoicingFocusTests(const muse::modularity::ContextPtr& ctx,
+                               const std::shared_ptr<AccessibilityController>& controller,
+                               QQuickWindow& window)
+{
+    QQuickItem field(window.contentItem());
+    field.setSize(QSizeF(300, 30));
+    field.forceActiveFocus();
+    const auto nativeFocus = window.activeFocusItem();
+    require(nativeFocus == &field, "real Qt text-target visual has keyboard focus");
+    ui::NavigationSection section(ctx, &field);
+    section.setName("RevoicingSection"); section.setOrder(100); section.setEnabled(true); section.componentComplete();
+    ui::NavigationPanel panel(ctx, &field);
+    panel.setName("File"); panel.setOrder(1); panel.setSection(&section); panel.setEnabled(true); panel.componentComplete();
+    ui::NavigationControl formatControl(ctx, &field), filenameControl(ctx, &field);
+    formatControl.setName("Format"); formatControl.setOrder(1); formatControl.setPanel(&panel); formatControl.setEnabled(true);
+    auto format = formatControl.accessible();
+    format->setRole(ui::MUAccessible::ComboBox); format->setName("Format: WAV (Microsoft)");
+    formatControl.componentComplete();
+    filenameControl.setName("Filename"); filenameControl.setOrder(2); filenameControl.setPanel(&panel); filenameControl.setEnabled(true);
+    auto filename = filenameControl.accessible();
+    filename->setRole(ui::MUAccessible::EditableText); filename->setName("File name: Dawn-thread");
+    filenameControl.componentComplete();
+    QAccessible::setActive(true);
+    require(muse::modularity::globalIoc()->resolve<IAccessibleAppRootObject>("test")->isAccessibilityActive(),
+            "public Qt activation enables original Muse revoicing");
+    filenameControl.requestActive(); process();
+    require(controller->lastFocused() == filename, "actual Muse controller records filename focus");
+    auto originalProvider = controller->focusedChild(panel.accessible());
+    require(originalProvider && originalProvider->role() == QAccessible::EditableText,
+            "external provider initially reports the actual filename edit");
+    const auto originalId = QAccessible::uniqueId(originalProvider);
+    const auto name = QStringLiteral("File name: r");
+    filename->setName(name);
+    process();
+    require(controller->pretendFocus() == format && controller->lastFocused() == filename,
+            "filename change temporarily advertises Format sibling without changing internal focus");
+    require(window.activeFocusItem() == nativeFocus, "revoicing leaves actual Qt keyboard target unchanged");
+    auto pretendProvider = controller->focusedChild(panel.accessible());
+    require(pretendProvider && pretendProvider->role() == QAccessible::ComboBox
+            && pretendProvider->text(QAccessible::Name) == "Format: WAV (Microsoft)"
+            && QAccessible::uniqueId(pretendProvider) != originalId,
+            "actual external focus route advertises the observed Format sibling");
+    QElapsedTimer timer; timer.start();
+    require(waitUntil([&]() { return controller->pretendFocus() == nullptr; }), "original 80ms revoicing timer restores focus");
+    require(timer.elapsed() < 1000 && controller->lastFocused() == filename && window.activeFocusItem() == nativeFocus,
+            "bounded real provider revoicing restores same target without focus or input action");
+    auto restoredProvider = controller->focusedChild(panel.accessible());
+    require(restoredProvider && QAccessible::uniqueId(restoredProvider) == originalId,
+            "external focus returns the exact original accessible runtime ID");
+    QAccessible::setActive(false);
+    qInfo() << "Muse filename revoicing restored exact focus after" << timer.elapsed() << "ms";
+}
+
 int main(int argc, char** argv)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -372,6 +426,7 @@ int main(int argc, char** argv)
             && namedBySibling(mainInterface, "Main editor focus") && mainInterface->focusChild(),
             "main editor provider and sibling/focus routes survive onboarding destruction");
     recipeDialogAccessibilityTests(engine, mainWindow);
+    revoicingFocusTests(ctx, accessibility, mainWindow);
     mainFocus.reset();
     mainPanel.reset();
     qInfo() << "Onboarding probe: dialog destroyed";
