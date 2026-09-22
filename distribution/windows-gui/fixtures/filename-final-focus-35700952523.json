@@ -1,0 +1,40 @@
+{
+  "artifact_id": 10684315117,
+  "artifact_sha256": "01fa89b7039dfec3e2240ccca0bcb269b155912495fdf39776d5919cda6c0bd2",
+  "run_id": 35700952523,
+  "source_commit": "2e46fc7ca621e081cdfe40ea999475021f1a9b96",
+  "current_action": "configure-wav-recipe",
+  "error_route": [
+    "ConsumerInput.Keyboard",
+    "ConsumerSession.Focus",
+    "ConsumerSession.ConfirmText",
+    "ConsumerTextReadback.Converge",
+    "ConsumerSession.Field"
+  ],
+  "last_input": {
+    "kind": "unicode",
+    "characters": 8,
+    "guarded_characters": 8,
+    "target_identity": "42,328134,4,-2147482860",
+    "window": 328134
+  },
+  "completed_typing_focus_waits": {
+    "count": 7,
+    "character_indexes": [1, 2, 3, 4, 5, 6, 7],
+    "restored_elapsed_ms": [100, 101, 98, 98, 100, 97, 100]
+  },
+  "failed_readback": {
+    "kind": "uia-value-or-text",
+    "expected": "reversed",
+    "reads": 0,
+    "confirmed": false
+  },
+  "failure_focus": {
+    "foreground": 328134,
+    "active": 328134,
+    "native_focus": 328134,
+    "uia_name": "Format: WAV (Microsoft)",
+    "uia_role": "ControlType.ComboBox",
+    "uia_identity": "42,328134,4,-2147482864"
+  }
+}

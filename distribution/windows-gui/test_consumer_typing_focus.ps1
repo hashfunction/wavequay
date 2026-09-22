@@ -15,6 +15,14 @@ $original=Get-Content (Join-Path $PSScriptRoot 'fixtures/filename-focus-34727941
 if($original.last_keys.before.pid -ne 2800 -or $original.last_keys.before.main -ne 262212 -or $original.last_keys.before.window -ne 655770 -or
    $original.last_keys.before.identity -cne '42,655770,4,-2147482860' -or $original.failure_focus.uia.identity -cne '42,655770,4,-2147482864' -or
    $original.failure_focus.uia.name -cne 'Format: WAV (Microsoft)'){throw 'Production replay no longer matches retained original focus identities'}
+$final=Get-Content (Join-Path $PSScriptRoot 'fixtures/filename-final-focus-35700952523.json') -Raw | ConvertFrom-Json
+if($final.artifact_sha256 -cne '01fa89b7039dfec3e2240ccca0bcb269b155912495fdf39776d5919cda6c0bd2' -or
+   $final.last_input.characters -ne 8 -or $final.last_input.guarded_characters -ne 8 -or
+   $final.completed_typing_focus_waits.count -ne 7 -or $final.completed_typing_focus_waits.character_indexes[-1] -ne 7 -or
+   $final.failed_readback.expected -cne 'reversed' -or $final.failed_readback.reads -ne 0 -or $final.failed_readback.confirmed -or
+   $final.failure_focus.native_focus -ne $final.last_input.window -or $final.failure_focus.uia_identity -cne '42,328134,4,-2147482864'){
+    throw 'Final-character replay no longer matches retained run 35700952523 evidence'
+}
 $policy=(Get-Content (Join-Path $PSScriptRoot 'ConsumerInput.cs') -Raw).Replace('namespace WaveQuayQualification','namespace WaveTypingPolicy')
 $methods=(Method Type)+(Method TypingFocus -Optional)
 Add-Type -TypeDefinition ($policy + @'
@@ -67,7 +75,7 @@ namespace WaveTypingReplay {
   public static string Run(){
    foreach(string text in new[]{"reversed","reopened","Dawn thread stereo"}){
     var r=new Replay();r.Run(text,"revoice");
-    Require(r.Sent==text&&r.Sends==text.Length&&r.SelectAll==1&&r.WaitCount==text.Length-1,"Production typing replayed input or skipped restored focus");
+    Require(r.Sent==text&&r.Sends==text.Length&&r.SelectAll==1&&r.WaitCount==text.Length,"Production typing replayed input or returned before final focus restoration");
    }
    var stable=new Replay();stable.Run("native path","stable",true);Require(stable.Sent=="native path"&&stable.WaitCount==0,"Native picker typing behavior changed");
    foreach(string fault in new[]{"never","foreign","native","target","class","identity","late","workflow","frozen"}){

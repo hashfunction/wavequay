@@ -310,6 +310,10 @@ namespace WaveQuayQualification
                         catch(Exception error){report["partialUnicodeReleaseRefused"]=error.Message;} }
                     Require(sent==2,"Partial consumer Unicode input");characterIndex++;
                 }
+                // The next character normally waits out Muse's name-change
+                // announcement. The final character has no next iteration, so
+                // restore the same exact target before handing it to readback.
+                TypingFocus(root,target,targetIdentity,nativeFocus,characterIndex,museInput);
                 inputs.Add(D("action",action,"kind","unicode","characters",text.Length,"guardedCharacters",text.Length,"targetIdentity",Identity(target),"window",root.Current.NativeWindowHandle,"final",lastKeyboard));Write();
             }
             private string TextValue(AutomationElement target)
